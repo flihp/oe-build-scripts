@@ -3,3 +3,4 @@ pseudodone
 sstate-cache/
 tmp-eglibc/
 conf/sanity_info
+build.log
