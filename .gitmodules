@@ -4,3 +4,6 @@
 [submodule "bitbake"]
 	path = bitbake
 	url = git://git.openembedded.org/bitbake
+[submodule "meta-selinux"]
+	path = meta-selinux
+	url = git@github.com:flihp/meta-selinux.git
