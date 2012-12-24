@@ -7,9 +7,6 @@
 [submodule "meta-selinux"]
 	path = meta-selinux
 	url = git://github.com/flihp/meta-selinux.git
-[submodule "meta-tpm"]
-	path = meta-tpm
-	url = git://github.com/flihp/meta-tpm.git
 [submodule "meta-intel"]
 	path = meta-intel
 	url = git://git.yoctoproject.org/meta-intel
