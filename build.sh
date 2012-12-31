@@ -1,4 +1,4 @@
 #!/bin/sh
     
 . ./environment.sh
-bitbake core-image-measured
+bitbake measured-image-bootimg
