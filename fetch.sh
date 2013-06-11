@@ -1,7 +1,5 @@
 #!/bin/sh
 
-METAS="git://github.com/flihp/meta-measured.git"
-
 # setup submodules
 grep 'submodule[[:space:]]*\".*\"]' ./.gitmodules \
     | sed -e 's&\[submodule\s\+\"\(.*\)\"\]&\1&' \
@@ -18,6 +16,6 @@ grep 'submodule[[:space:]]*\".*\"]' ./.gitmodules \
 done
 
 # clone meta layers directly from URIs
-for meta in ${METAS}; do
+for meta in $(cat ./LAYERS); do
     git clone ${meta}
 done
