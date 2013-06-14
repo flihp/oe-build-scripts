@@ -5,3 +5,4 @@ tmp-eglibc/
 conf/sanity_info
 build.log
 meta-measured
+cache
