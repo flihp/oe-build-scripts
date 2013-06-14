@@ -1,4 +1,4 @@
 #!/bin/sh
     
 BDIR=$(readlink -f `dirname ./`)
-export PATH=$BDIR/openembedded-core/scripts:$BDIR/bitbake/bin:$PATH
+export PATH=$BDIR/oe-core/scripts:$BDIR/bitbake/bin:$PATH
