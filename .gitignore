@@ -4,5 +4,6 @@ sstate-cache/
 tmp-eglibc/
 conf/sanity_info
 build.log
+meta-hype
 meta-measured
 cache
