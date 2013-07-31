@@ -5,5 +5,6 @@ tmp-eglibc/
 conf/sanity_info
 build.log
 meta-hype
+meta-intel
 meta-measured
 cache
