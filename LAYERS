@@ -1,2 +1,2 @@
-git://github.com/openembedded/bitbake.git 1.18
-git://github.com/openembedded/oe-core.git dylan
+git://github.com/openembedded/bitbake.git
+git://github.com/openembedded/oe-core.git
