@@ -1,5 +1,7 @@
 #!/bin/sh
 
+CHECKOUT_DIR=${CHECKOUT_DIR:-./src}
+
 # setup submodules
 fetch_submodules() {
     [ ! -f ./.gitmodules ] && return 0
@@ -26,7 +28,10 @@ fetch_repos () {
 	read -r url branch || DONE=true
 	if [ ! -z ${url} ]; then
             [ -z ${branch} ] && branch=master
+            [ ! -d ${CHECKOUT_DIR} ] && mkdir ${CHECKOUT_DIR}
+            cd ${CHECKOUT_DIR:-./src}
             git clone --branch ${branch} ${url}
+            cd -
 	fi
     done < ./LAYERS
 }
