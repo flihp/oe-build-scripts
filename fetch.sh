@@ -23,9 +23,7 @@ fetch_submodules() {
 # clone meta layers directly from URIs
 fetch_repos () {
     [ ! -f ./LAYERS ] && return 0
-    DONE=false
-    until $DONE; do
-	read -r url branch || DONE=true
+    while read -r url branch; do
 	if [ ! -z ${url} ]; then
             [ -z ${branch} ] && branch=master
             [ ! -d ${CHECKOUT_DIR} ] && mkdir ${CHECKOUT_DIR}
