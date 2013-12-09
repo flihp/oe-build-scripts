@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CHECKOUT_DIR=${CHECKOUT_DIR:-./src}
+METAS_DIR=${METAS_DIR:-./metas}
 
 # setup submodules
 fetch_submodules() {
@@ -23,15 +23,22 @@ fetch_submodules() {
 # clone meta layers directly from URIs
 fetch_repos () {
     [ ! -f ./LAYERS ] && return 0
-    while read -r url branch; do
-	if [ ! -z ${url} ]; then
-            [ -z ${branch} ] && branch=master
-            [ ! -d ${CHECKOUT_DIR} ] && mkdir ${CHECKOUT_DIR}
-            cd ${CHECKOUT_DIR:-./src}
-            git clone --branch ${branch} ${url}
-            cd -
-	fi
-    done < ./LAYERS
+    . ./LAYERS
+    echo "${BITBAKE}" | while read -r url branch; do
+        if [ -z ${url} ]; then
+            echo "ERROR: BITBAKE must be set in LAYERS."
+            exit 1
+        fi
+        git clone --branch ${branch:-master} ${url}
+    done
+    echo "${METAS}" | while read -r url branch; do
+        if [ ! -z ${url} ]; then
+            [ ! -d ${METAS_DIR} ] && mkdir ${METAS_DIR}
+            cd ${METAS_DIR}
+            git clone --branch ${branch:-master} ${url}
+            cd - > /dev/null
+        fi
+    done
 }
 
 if [ ! -f ./.gitmodules ] && [ ! -f ./LAYERS ]; then

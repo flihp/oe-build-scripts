@@ -1,2 +1,6 @@
-git://github.com/openembedded/bitbake.git
-git://github.com/openembedded/oe-core.git
+# The first line of this file must be bitbake. The fetch script expects this.
+BITBAKE="git://github.com/openembedded/bitbake.git"
+METAS="
+      git://github.com/openembedded/oe-core.git
+      git://github.com/openembedded/meta-oe.git
+"
