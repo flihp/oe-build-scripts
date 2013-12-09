@@ -2,6 +2,7 @@
 
 # setup submodules
 fetch_submodules() {
+    [ ! -f ./.gitmodules ] && return 0
     grep 'submodule[[:space:]]*\".*\"]' ./.gitmodules \
 	| sed -e 's&\[submodule\s\+\"\(.*\)\"\]&\1&' \
 	| while read dir; do
@@ -19,6 +20,7 @@ fetch_submodules() {
 
 # clone meta layers directly from URIs
 fetch_repos () {
+    [ ! -f ./LAYERS ] && return 0
     DONE=false
     until $DONE; do
 	read -r url branch || DONE=true
@@ -28,6 +30,11 @@ fetch_repos () {
 	fi
     done < ./LAYERS
 }
+
+if [ ! -f ./.gitmodules ] && [ ! -f ./LAYERS ]; then
+    echo "ERROR: Need some gitmodules or layers to clone."
+    exit 1
+fi
 
 fetch_submodules
 fetch_repos
