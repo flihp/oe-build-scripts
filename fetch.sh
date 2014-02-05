@@ -20,6 +20,42 @@ fetch_submodules() {
     done
 }
 
+fetch_repo () {
+    url="${1}"
+    branch="${2:-master}"
+    repo_name='^.*\/\([A-Za-z_\-]\+\)\(\.git\)\?$'
+    branch_name='^[[:space:]]\?\(\*\)[[:space:]]\+\([A-Za-z0-9_\-\.]\+\)[[:space:]]*$'
+    name=$(echo "${url}" | sed -n "s&${repo_name}&\1&p")
+    ret=0
+
+    # fresh clone
+    if [ ! -d ${name} ]; then
+        echo "Cloning ${branch} from repo: ${name}"
+        git clone --branch ${branch} ${url} ${name}
+        return $?
+    fi
+
+    # pull existing
+    pushd ${name} > /dev/null
+    if git status | grep 'nothing to commit (working directory clean)'; then
+        tmp_name=$(git branch | sed -n "s&${branch_name}&\2&p")
+        if [ "${tmp_name}" == "${branch}" ]; then
+            echo "${name}: Pulling branch ${branch} --ff-only ..."
+            git pull --ff-only
+            ret=$?
+        else
+            echo "Git repo ${name} is on ${tmp_name} branch, this disagrees with LAYERS file. Not pulling."
+            ret=1
+        fi
+    else
+        echo "Working dir for meta layer ${name} is dirty: not pulling."
+        ret=1
+    fi
+    popd > /dev/null
+
+    return ${ret}
+}
+
 # clone meta layers directly from URIs
 fetch_repos () {
     [ ! -f ./LAYERS ] && return 0
@@ -29,14 +65,14 @@ fetch_repos () {
             echo "ERROR: BITBAKE must be set in LAYERS."
             exit 1
         fi
-        git clone --branch ${branch:-master} ${url}
+        fetch_repo "${url}" "${branch}"
     done
     echo "${METAS}" | while read -r url branch; do
         if [ ! -z ${url} ]; then
             [ ! -d ${METAS_DIR} ] && mkdir ${METAS_DIR}
-            cd ${METAS_DIR}
-            git clone --branch ${branch:-master} ${url}
-            cd - > /dev/null
+            pushd ${METAS_DIR} > /dev/null
+            fetch_repo "${url}" "${branch}"
+            popd > /dev/null
         fi
     done
 }
