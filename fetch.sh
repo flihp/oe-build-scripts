@@ -67,14 +67,14 @@ fetch_repos () {
         fi
         fetch_repo "${url}" "${branch}"
     done
+    pushd ${METAS_DIR} > /dev/null
     echo "${METAS}" | while read -r url branch; do
         if [ ! -z ${url} ]; then
             [ ! -d ${METAS_DIR} ] && mkdir ${METAS_DIR}
-            pushd ${METAS_DIR} > /dev/null
             fetch_repo "${url}" "${branch}"
-            popd > /dev/null
         fi
     done
+    popd > /dev/null
 }
 
 if [ ! -f ./.gitmodules ] && [ ! -f ./LAYERS ]; then
