@@ -37,7 +37,7 @@ fetch_repo () {
 
     # pull existing
     pushd ${name} > /dev/null
-    if git status | grep 'nothing to commit (working directory clean)'; then
+    if git status | grep -q 'nothing to commit (working directory clean)'; then
         tmp_name=$(git branch | sed -n "s&${branch_name}&\2&p")
         if [ "${tmp_name}" == "${branch}" ]; then
             echo "${name}: Pulling branch ${branch} --ff-only ..."
