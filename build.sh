@@ -1,4 +1,4 @@
 #!/bin/sh
     
 . ./environment.sh
-bitbake core-image-minimal
+{ time bitbake core-image-minimal; } 2>&1 | tee build.log
