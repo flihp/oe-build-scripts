@@ -36,7 +36,8 @@ fetch_repo () {
     fi
 
     # pull existing
-    pushd ${name} > /dev/null
+    thisdir=$(pwd)
+    cd ${name}
     if git status | grep -q 'nothing to commit (working directory clean)'; then
         tmp_name=$(git branch | sed -n "s&${branch_name}&\2&p")
         if [ "${tmp_name}" == "${branch}" ]; then
@@ -51,7 +52,7 @@ fetch_repo () {
         echo "Working dir for meta layer ${name} is dirty: not pulling."
         ret=1
     fi
-    popd > /dev/null
+    cd ${thisdir}
 
     return ${ret}
 }
@@ -67,14 +68,15 @@ fetch_repos () {
         fi
         fetch_repo "${url}" "${branch}"
     done
-    pushd ${METAS_DIR} > /dev/null
+    thisdir=$(pwd)
+    cd ${METAS_DIR}
     echo "${METAS}" | while read -r url branch; do
         if [ ! -z ${url} ]; then
             [ ! -d ${METAS_DIR} ] && mkdir ${METAS_DIR}
             fetch_repo "${url}" "${branch}"
         fi
     done
-    popd > /dev/null
+    cd ${thisdir}
 }
 
 if [ ! -f ./.gitmodules ] && [ ! -f ./LAYERS ]; then
