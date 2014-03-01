@@ -40,7 +40,7 @@ fetch_repo () {
     cd ${name}
     if git status | grep -q 'nothing to commit (working directory clean)'; then
         tmp_name=$(git branch | sed -n "s&${branch_name}&\2&p")
-        if [ "${tmp_name}" == "${branch}" ]; then
+        if [ "${tmp_name}" = "${branch}" ]; then
             echo "${name}: Pulling branch ${branch} --ff-only ..."
             git pull --ff-only
             ret=$?
