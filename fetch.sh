@@ -68,6 +68,7 @@ fetch_repos () {
         fi
         fetch_repo "${url}" "${branch}"
     done
+    if [ ! -d ${METAS_DIR} ]; then mkdir ${METAS_DIR}; fi
     thisdir=$(pwd)
     cd ${METAS_DIR}
     echo "${METAS}" | while read -r url branch; do
