@@ -73,7 +73,6 @@ fetch_repos () {
     cd ${METAS_DIR}
     echo "${METAS}" | while read -r url branch; do
         if [ ! -z ${url} ]; then
-            [ ! -d ${METAS_DIR} ] && mkdir ${METAS_DIR}
             fetch_repo "${url}" "${branch}"
         fi
     done
