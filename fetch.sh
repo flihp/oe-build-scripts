@@ -31,7 +31,7 @@ fetch_repo () {
     # fresh clone
     if [ ! -d ${name} ]; then
         echo "Cloning ${branch} from repo: ${name}"
-        git clone --branch ${branch} ${url} ${name}
+        git clone --progress --branch ${branch} ${url} ${name}
         return $?
     fi
 
