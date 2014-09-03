@@ -1,10 +1,8 @@
 bitbake.lock
 pseudodone
 sstate-cache/
-tmp-eglibc/
 conf/sanity_info
 build.log
-cache
 downloads
 bitbake
 metas
