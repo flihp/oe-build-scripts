@@ -1,5 +1,6 @@
 # The first line of this file must be bitbake. The fetch script expects this.
-BITBAKE="git://github.com/openembedded/bitbake.git"
+GITMIRROR=""
+BITBAKE="${GITMIRROR:-git://github.com/openembedded}/bitbake.git"
 METAS="
-      git://github.com/openembedded/openembedded-core.git
+      ${GITMIRROR:-git://github.com/openembedded}/openembedded-core.git
 "
