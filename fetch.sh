@@ -55,6 +55,7 @@ dryrun_cmd () {
         echo "dryrun: not executing command"
         echo "    \"$@\""
     fi
+    return $?
 }
 fetch_repo () {
     url="${1}"
@@ -102,16 +103,28 @@ fetch_repos () {
             echo "ERROR: BITBAKE must be set in LAYERS."
             exit 1
         fi
-        fetch_repo "${url}" "${branch}"
+        if ! fetch_repo "${url}" "${branch}"; then
+            echo "ERROR: Failed to fetch repo from ${url}"
+            exit 1
+        fi
     done
+    if [ $? -ne 0 ]; then
+        exit $?
+    fi
     if [ ! -d ${METAS_DIR} ]; then mkdir ${METAS_DIR}; fi
     thisdir=$(pwd)
     cd ${METAS_DIR}
     echo "${METAS}" | while read -r url branch; do
         if [ ! -z ${url} ]; then
-            fetch_repo "${url}" "${branch}"
+            if ! fetch_repo "${url}" "${branch}"; then
+                echo "ERROR: Failed to fetch repo from ${url}"
+                exit 1
+            fi
         fi
     done
+    if [ $? -ne 0 ]; then
+        exit $?
+    fi
     cd ${thisdir}
 }
 
