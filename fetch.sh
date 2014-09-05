@@ -2,6 +2,34 @@
 
 METAS_DIR=${METAS_DIR:-./metas}
 
+usage () {
+    cat <<EOF
+usave: $0 [-d] [-h]
+EOF
+}
+
+help_out () {
+    usage
+    cat <<EOF
+Options
+-d: druy run, shows commands being executed but does not 'fetch' anything.
+-h: show help text
+EOF
+}
+
+while getopts "dh" OPTION
+do
+    case $OPTION in
+        d)
+            DRYRUN=true
+            ;;
+        h)
+            help_out
+            exit 0
+            ;;
+    esac
+done
+
 # setup submodules
 fetch_submodules() {
     [ ! -f ./.gitmodules ] && return 0
@@ -20,6 +48,14 @@ fetch_submodules() {
     done
 }
 
+dryrun_cmd () {
+    if [ -z "${DRYRUN}" ]; then
+        $@
+    else
+        echo "dryrun: not executing command"
+        echo "    \"$@\""
+    fi
+}
 fetch_repo () {
     url="${1}"
     branch="${2:-master}"
@@ -31,7 +67,7 @@ fetch_repo () {
     # fresh clone
     if [ ! -d ${name} ]; then
         echo "Cloning ${branch} from repo: ${name}"
-        git clone --progress --branch ${branch} ${url} ${name}
+        dryrun_cmd git clone --progress --branch ${branch} ${url} ${name}
         return $?
     fi
 
@@ -42,7 +78,7 @@ fetch_repo () {
         tmp_name=$(git branch | sed -n "s&${branch_name}&\2&p")
         if [ "${tmp_name}" = "${branch}" ]; then
             echo "${name}: Pulling branch ${branch} --ff-only ..."
-            git pull --ff-only
+            dryrun_cmd git pull --ff-only
             ret=$?
         else
             echo "Git repo ${name} is on ${tmp_name} branch, this disagrees with LAYERS file. Not pulling."
