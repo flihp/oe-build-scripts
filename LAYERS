@@ -1,6 +1,13 @@
-# The first line of this file must be bitbake. The fetch script expects this.
-GITMIRROR=""
-BITBAKE="${GITMIRROR:-git://github.com/openembedded}/bitbake.git"
-METAS="
-      ${GITMIRROR:-git://github.com/openembedded}/openembedded-core.git
-"
+# This file contains a description of all git repos used in this build.
+# This should be bitbake and a bunch of OE meta layers.
+# The format is pretty simple:
+#  name repo_url state
+# where:
+#  'name' is just an identifier for the repo
+#  'repo_url' is the url where the git repo lives (the upstream)
+#  'state' is a git object (hash, tag, branch etc)
+# The 'state' field can be omitted and the tip of master will be used by default
+
+bitbake git://github.com/openembedded/bitbake.git
+openembedded-core git://github.com/openembedded/openembedded-core.git
+
