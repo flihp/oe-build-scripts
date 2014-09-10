@@ -1,6 +1,5 @@
 bitbake.lock
 pseudodone
-sstate-cache/
 conf/sanity_info
 build.log
 downloads
