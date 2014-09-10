@@ -135,7 +135,7 @@ fetch_repo () {
     fi
     cd ${name}
     # an extra fetch is redundant for new clones but it doesn't hurt
-    dryrun_cmd git fetch
+    dryrun_cmd git fetch --progress
     if [ ${is_branch} -eq 0 ]; then
         # object is a branch: check it out
         dryrun_cmd git checkout ${object}
@@ -144,7 +144,7 @@ fetch_repo () {
             return $?
         fi
         # and pull w/o merge
-        dryrun_cmd git pull --ff-only
+        dryrun_cmd git pull --ff-only --progress
         if [ $? -ne 0 ]; then
             cd ${thisdir}
             return $?
