@@ -6,6 +6,10 @@
 # script. You can think of this script as saving a snapshot of the git repos
 # in this build that can be used at a later date to recreate the same build.
 
+if [ -f fetch.conf ]; then
+    . ./fetch.conf
+fi
+
 head_hash () {
     local dir=$1
     if [ ! -d ${dir} ]; then
@@ -20,8 +24,20 @@ head_hash () {
 repo_url () {
     local dir=$1
     local remote="$(git --git-dir=${dir}/.git remote)"
+    local first_remote=$(git --git-dir=${dir}/.git remote -v | grep ${remote} | head -n 1 | awk '{print $2}')
 
-    git --git-dir=${dir}/.git remote -v | grep ${remote} | head -n 1 | awk '{print $2}'
+    # If git dir origin remote is from the GIT_MIRROR we use the remote
+    # from the mirror presumably to get the 'upstream'. If your mirroring
+    # scheme is 2 levels deep or something crazy like that you're on your own.
+    if echo "${first_remote}" | grep -q -i "${GIT_MIRROR}" && echo "${GIT_MIRROR}" | grep -q '^file://'; then
+        local mirror_dir=$(echo "${first_remote}" | sed -n 's&^file://\(.*\)$&\1&p')
+        if [ -d ${mirror_dir}/.git ]; then
+            mirror_dir="${mirror_dir}/.git"
+        fi
+        git --git-dir=${mirror_dir} remote -v | grep ${remote} | head -n 1 | awk '{print $2}'
+    else
+        echo "${first_remote}"
+    fi
 }
 
 process_repos () {
