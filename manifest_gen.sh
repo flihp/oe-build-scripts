@@ -10,6 +10,7 @@ if [ -f fetch.conf ]; then
     . ./fetch.conf
 fi
 
+# get object hash of wherever HEAD is
 head_hash () {
     local dir=$1
     if [ ! -d ${dir} ]; then
@@ -20,23 +21,31 @@ head_hash () {
     fi
     git --git-dir=${dir}/.git show HEAD | head -n 1 | awk '{print $2}'
 }
-
+# Get URL of the current remote (the one your current branch tracks).
+# Make last parameter 'follow' to indicate you want to follow local file://
+# remotes till you hit a network remote.
 repo_url () {
-    local dir=$1
-    local remote="$(git --git-dir=${dir}/.git remote)"
-    local first_remote=$(git --git-dir=${dir}/.git remote -v | grep ${remote} | head -n 1 | awk '{print $2}')
+    local dir=${1#file://}
+    if [ -d "${dir}/.git" ]; then
+        dir="${dir}/.git"
+    fi
+    local remote=$(git --git-dir=${dir} branch -vv| sed -n 's&^\*\(.*\)*\[\(.*\)\/.*\].*$&\2&p')
+    local remote_url=$(git --git-dir=${dir} remote -v | grep "^${remote}.*fetch)$" | awk '{print $2}')
 
-    # If git dir origin remote is from the GIT_MIRROR we use the remote
-    # from the mirror presumably to get the 'upstream'. If your mirroring
-    # scheme is 2 levels deep or something crazy like that you're on your own.
-    if echo "${first_remote}" | grep -q -i "${GIT_MIRROR}" && echo "${GIT_MIRROR}" | grep -q '^file://'; then
-        local mirror_dir=$(echo "${first_remote}" | sed -n 's&^file://\(.*\)$&\1&p')
-        if [ -d ${mirror_dir}/.git ]; then
-            mirror_dir="${mirror_dir}/.git"
-        fi
-        git --git-dir=${mirror_dir} remote -v | grep ${remote} | head -n 1 | awk '{print $2}'
+    # for local directories strip prefix and append '.git' if necessary
+    remote_url=${remote_url#file://}
+    if [ ! -d ${remote_url} ] && [ -d ${remote_url}.git ]; then
+        remote_url="${remote_url}.git"
+    fi
+
+    if [ "follow" = "$2" ] && [ -d ${remote_url} ]; then
+        repo_url ${remote_url} follow
     else
-        echo "${first_remote}"
+        # add prefix back just for consistency
+        if [ -d ${remote_url} ]; then
+            remote_url="file://${remote_url}"
+        fi
+        echo ${remote_url}
     fi
 }
 
@@ -46,14 +55,14 @@ process_repos () {
         echo "Failed to get HEAD object for build scripts repo"
         exit 1
     fi
-    build_url=$(repo_url ./)
+    build_url=$(repo_url ./ follow)
     echo "oe-build-scripts ${build_url} ${build_obj}"
     bitbake_obj=$(head_hash ./bitbake)
     if [ $? -ne 0 ]; then
         echo "Failed to get HEAD oject for bitbake repo"
         exit 1
     fi
-    bitbake_url=$(repo_url ./bitbake)
+    bitbake_url=$(repo_url ./bitbake follow)
     echo "bitbake ${bitbake_url} ${bitbake_obj}"
     ls -1 metas | while read DIR; do
         rel_path=metas/${DIR}
@@ -62,7 +71,7 @@ process_repos () {
             echo "Failed to get HEAD hash for meta layer ${rel_path}"
             exit 1
         fi
-        meta_url=$(repo_url ${rel_path})
+        meta_url=$(repo_url ${rel_path} follow)
         echo "${DIR} ${meta_url} ${meta_obj}"
     done
 }
