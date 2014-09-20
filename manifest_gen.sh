@@ -22,31 +22,38 @@ head_hash () {
     git --git-dir=${dir}/.git show HEAD | head -n 1 | awk '{print $2}'
 }
 # Get URL of the current remote (the one your current branch tracks).
-# Make last parameter 'follow' to indicate you want to follow local file://
+# Make second parameter 'follow' to indicate you want to follow local file://
 # remotes till you hit a network remote.
 repo_url () {
     local dir=${1#file://}
-    if [ -d "${dir}/.git" ]; then
-        dir="${dir}/.git"
+
+    # we get something that isn't a local file path we're done
+    if echo ${dir} | grep -q '^[^:]\+:\/\/'; then
+        echo "${dir}"
+        exit 0
     fi
+    # find the git dir
+    if git --git-dir="${dir}" remote > /dev/null 2>&1; then
+        # noop
+        dir="${dir}"
+    elif git --git-dir="${dir}/.git" remote > /dev/null 2>&1; then
+        dir="${dir}/.git"
+    elif git --git-dir="${dir}.git" remote > /dev/null 2>&1; then
+        dir="${dir}.git"
+    else
+        return 1
+    fi
+
+    # get URL for remote
     local remote=$(git --git-dir=${dir} branch -vv| sed -n 's&^\*\(.*\)*\[\(.*\)\/.*\].*$&\2&p')
     local remote_url=$(git --git-dir=${dir} remote -v | grep "^${remote}.*fetch)$" | awk '{print $2}')
 
-    # for local directories strip prefix and append '.git' if necessary
-    remote_url=${remote_url#file://}
-    if [ ! -d ${remote_url} ] && [ -d ${remote_url}.git ]; then
-        remote_url="${remote_url}.git"
-    fi
-
-    if [ "follow" = "$2" ] && [ -d ${remote_url} ]; then
+    if [ "follow" = "$2" ]; then
         repo_url ${remote_url} follow
     else
-        # add prefix back just for consistency
-        if [ -d ${remote_url} ]; then
-            remote_url="file://${remote_url}"
-        fi
         echo ${remote_url}
     fi
+    return $?
 }
 
 process_repos () {
@@ -56,22 +63,34 @@ process_repos () {
         exit 1
     fi
     build_url=$(repo_url ./ follow)
+    if [ $? -ne 0 ]; then
+        echo "Failed to get URL for build script remote"
+        return 1
+    fi
     echo "oe-build-scripts ${build_url} ${build_obj}"
     bitbake_obj=$(head_hash ./bitbake)
     if [ $? -ne 0 ]; then
         echo "Failed to get HEAD oject for bitbake repo"
-        exit 1
+        return 1
     fi
     bitbake_url=$(repo_url ./bitbake follow)
+    if [ $? -ne 0 ]; then
+        echo "Failed to get URL for bitbake remote"
+        return 1
+    fi
     echo "bitbake ${bitbake_url} ${bitbake_obj}"
     ls -1 metas | while read DIR; do
         rel_path=metas/${DIR}
         meta_obj=$(head_hash ${rel_path})
         if [ $? -ne 0 ]; then
             echo "Failed to get HEAD hash for meta layer ${rel_path}"
-            exit 1
+            return 1
         fi
         meta_url=$(repo_url ${rel_path} follow)
+        if [ $? -ne 0 ]; then
+            echo "Failed to get URL for ${rel_path} remote"
+            return 1
+        fi
         echo "${DIR} ${meta_url} ${meta_obj}"
     done
 }
