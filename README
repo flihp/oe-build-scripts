@@ -2,6 +2,9 @@ oe-build-scripts
 ================
 
 This is a set of build scripts that I use to build OE images.
+It also contains the infrastructure common to other projects like scripts to pull in additonal meta layers but it doesn't these facilities itself (see LAYERS).
 There are a number of branches, each of which is specialized to build a specific project / image.
 The 'master' branch is a simple template that builds a 'distro-less' generic core-image-minimal.
-It also contains the infrastructure common to other projects like scripts to pull in additonal meta layers but it doesn't these facilities itself (see LAYERS).
+The 'measured' branch builds the boot image from meta-measured.
+The 'selinux' branch builds the minimal selinux image from meta-selinux.
+
