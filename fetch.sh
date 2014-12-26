@@ -57,51 +57,6 @@ dryrun_cmd () {
     return $?
 }
 
-# no output but $? is set to 0 if specified object is a branch name
-is_obj_branch () {
-    local object=${1}
-    local git_dir=${2:-./.git}
-
-    git --git-dir=${git_dir} branch -a | grep -q "^\(\*\)\?[[:space:]]*remotes/origin/${object}[[:space:]]*$"
-}
-
-# no output but $? is set to 0 if specified object is a tag
-is_obj_tag () {
-    local object=${1}
-    local git_dir=${2:-./.git}
-
-    git --git-dir=${git_dir} tag -l | grep -q "${object}"
-}
-
-# no output but $? is set to 0 if specified object is a hash
-is_obj_hash () {
-    local object=${1}
-
-    echo ${1} | grep -q '[0-9a-f]\{5,40\}'
-}
-
-# returns current branch name on stdout
-current_branch () {
-    local git_dir=${1:-./.git}
-
-    git --git-dir=${git_dir} branch | sed -n "s&^\(\*\)[[:space:]]*\(.*\)[[:space:]]*$&\2&p"
-}
-
-# returns the commit pointed to by a tag on stdout
-tag_to_hash () {
-    local object=${1}
-    local git_dir=${2:-./.git}
-
-    git --git-dir=${git_dir} rev-list ${object} | head -n 1
-}
-
-# returns the commit pionted to by HEAD on stdout
-get_head_hash () {
-    local git_dir=${1:-./.git}
-
-    git --git-dir=${git_dir} show | head -n 1 | awk '{print $2}'
-}
-
 # put a single repo into the specified state
 # state is determined by 'object':
 #  We clone the repo and set 'HEAD' to the specified object.
@@ -141,42 +96,6 @@ fetch_repo () {
     fi
 }
 
-# error checking for buildscript repo
-# we change nothing about the state of this repo, only fail if it disagrees
-#  with the manifest
-handle_buildscripts () {
-    local name=${1}
-    local url=${2}
-    local object=${3:-master}
-
-    # if object is a hash make sure HEAD points to that hash, else fail
-    if is_obj_hash ${object}; then
-        if [ "$(get_head_hash)" != "${object}" ]; then
-            echo "Manifest wants oe-build-scripts HEAD to be on ${object} but it's currently on $(get_head_hash). Please sort this out before running this script."
-            exit 1
-        fi
-        return 0
-    fi
-    # if object is a tag make sure HEAD points to the same commit
-    if is_obj_tag ${object}; then
-        if [ "$(get_head_hash)" != "$(tag_to_hash ${object})" ]; then
-            echo "Manifest wants oe-build-scripts HEAD to be on ${object} but it's currently on $(get_head_hash). Please sort this out before running this script."
-            exit 1
-        fi
-        return 0
-    fi
-    # if buildscripts should be on a branch fail if it's not
-    if is_obj_branch ${object}; then
-        if [ "${object}" != "$(current_branch)" ]; then
-            echo "oe-build-scripts: Current branch is $(current_branch) but manifest wants us on ${object}. Please sort this out before running this script."
-            exit 1
-        fi
-        return 0
-    fi
-    # fallthrough: if we get here the object is invalid
-    echo "oe-build-scripts: Object from manifest: \"${object}\" isn't a branch, tag or commit hash? Check to be sure the manifest isn't corrupt."
-    exit 1
-}
 # Iterate over LAYERS file processing each line.
 # We treat 'bitbake' special and process it from the build root. All other
 #  repos are assumed to be meta layers and we process those in the METAS_DIR.
@@ -190,12 +109,6 @@ fetch_repos () {
         if [ -z ${url} ] | [ -z ${name} ]; then
             echo "ERROR: format error in LAYERS file."
             exit 1
-        fi
-        # Build scripts repo is where this script lives so it must alredy be
-        # checked out. We handle this repo separately because we don't change
-        # it.
-        if [ ${name} = "oe-build-scripts" ]; then
-            handle_buildscripts "${name}" "${url}" "${branch}" "${rev}"
         fi
         # we put bitbake in the top level dir
         # we put all other repos (meta-layers) in METAS_DIR
