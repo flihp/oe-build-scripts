@@ -110,14 +110,10 @@ fetch_repos () {
             echo "ERROR: format error in LAYERS file."
             exit 1
         fi
-        # we put bitbake in the top level dir
-        # we put all other repos (meta-layers) in METAS_DIR
-        if [ ${name} != "bitbake" ]; then
-            if [ ! -d ${METAS_DIR} ]; then
-                mkdir -p ${METAS_DIR}
-            fi
-            cd ${METAS_DIR}
+        if [ ! -d ${METAS_DIR} ]; then
+            mkdir -p ${METAS_DIR}
         fi
+        cd ${METAS_DIR}
         if [ ! -z "${GIT_MIRROR}" ]; then
             url=$(echo ${url} | sed -n "s&^.*/\([0-9A-Za-z_-]\+\(\.git\)\?\)$&${GIT_MIRROR}/\1&p")
         fi

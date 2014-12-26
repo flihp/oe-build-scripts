@@ -98,8 +98,6 @@ process_repo () {
 }
 
 process_repos () {
-    process_repo ./ "oe-build-scripts"
-    process_repo ./bitbake
     ls -1 metas | while read DIR; do
         process_repo metas/${DIR}
     done

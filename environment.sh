@@ -2,6 +2,5 @@
 
 # clean env and add OE stuff
 . /etc/profile
-BDIR=$(readlink -f `dirname ./`)
-METAS=${BDIR}/metas
-export PATH=$METAS/oe-core/scripts:$BDIR/bitbake/bin:$PATH
+METAS=$(readlink -f `dirname ./`)/metas
+export PATH=${METAS}/openembedded-core/scripts:${METAS}/bitbake/bin:$PATH
