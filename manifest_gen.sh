@@ -21,6 +21,17 @@ head_hash () {
     fi
     git --git-dir=${dir}/.git show HEAD | head -n 1 | awk '{print $2}'
 }
+
+repo_branch () {
+    local dir=${1}
+    if [ ! -d ${dir} ]; then
+        return 1
+    fi
+    if [ ! -d ${dir}/.git ]; then
+        return 2
+    fi
+    git --git-dir=${dir}/.git branch | grep '^\*' | awk '{ print $2 }'
+}
 # Get URL of the current remote (the one your current branch tracks).
 # Make second parameter 'follow' to indicate you want to follow local file://
 # remotes till you hit a network remote.
@@ -67,10 +78,20 @@ process_repos () {
         echo "Failed to get URL for build script remote"
         return 1
     fi
-    echo "oe-build-scripts ${build_url} ${build_obj}"
+    build_branch=$(repo_branch ./)
+    if [ $? -ne 0 ]; then
+        echo "Failed to get branch for build script remote"
+        return 1
+    fi
+    echo "oe-build-scripts ${build_url} ${build_branch} ${build_obj}"
     bitbake_obj=$(head_hash ./bitbake)
     if [ $? -ne 0 ]; then
         echo "Failed to get HEAD oject for bitbake repo"
+        return 1
+    fi
+    bitbake_branch=$(repo_branch ./)
+    if [ $? -ne 0 ]; then
+        echo "Failed to get branch for bitbake repo"
         return 1
     fi
     bitbake_url=$(repo_url ./bitbake follow)
@@ -78,7 +99,7 @@ process_repos () {
         echo "Failed to get URL for bitbake remote"
         return 1
     fi
-    echo "bitbake ${bitbake_url} ${bitbake_obj}"
+    echo "bitbake ${bitbake_url} ${bitbake_branch} ${bitbake_obj}"
     ls -1 metas | while read DIR; do
         rel_path=metas/${DIR}
         meta_obj=$(head_hash ${rel_path})
@@ -86,12 +107,17 @@ process_repos () {
             echo "Failed to get HEAD hash for meta layer ${rel_path}"
             return 1
         fi
+        meta_branch=$(repo_branch ${rel_path})
+        if [ $? -ne 0 ]; then
+            echo "Failed to get branch for meta layer ${rel_path}"
+            return 1
+        fi
         meta_url=$(repo_url ${rel_path} follow)
         if [ $? -ne 0 ]; then
             echo "Failed to get URL for ${rel_path} remote"
             return 1
         fi
-        echo "${DIR} ${meta_url} ${meta_obj}"
+        echo "${DIR} ${meta_url} ${meta_branch} ${meta_obj}"
     done
 }
 
