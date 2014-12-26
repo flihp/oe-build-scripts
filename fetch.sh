@@ -110,43 +110,38 @@ get_head_hash () {
 # Aim to be conservative: bail if there are local changes, only advance
 #  branches if fastforward is possible.
 fetch_repo () {
-    url="${1}"
-    branch="${2:-master}"
-    rev="${3:-HEAD}"
+    local url="${1}"
+    local branch="${2:-master}"
+    local rev="${3:-HEAD}"
 
     if [ -z "${url}" ]; then
         echo "fetch_repo: no URL provided"
         return 1
     fi
 
-    repo_name='^.*\/\([A-Za-z_\-]\+\)\(\.git\)\?$'
-    name=$(echo "${url}" | sed -n "s&${repo_name}&\1&p")
-    # Make sure the repo is in a reasonable state
-    # if it doesn't exist just clone it
+    local name=$(echo "${url}" | \
+                 sed -n "s&^.*\/\([A-Za-z_\-]\+\)\(\.git\)\?$&\1&p")
+    local worktree=${name}
+    local gitdir=${name}/.git
+
     if [ ! -d ${name} ]; then
         echo "Cloning from repo: ${name}"
         if ! dryrun_cmd git clone --progress ${url} ${name}; then
-            cd ${thisdir}
             return 1
         fi
     else
         echo "Fetching repo: ${name}"
-        if ! dryrun_cmd git --git-dir=./${name}/.git fetch --progress; then
+        if ! dryrun_cmd git --git-dir=${gitdir} --work-tree=${worktree} fetch --progress; then
             return 2
         fi
     fi
 
-    local thisdir=$(pwd)
-    cd ${name}
-    if ! dryrun_cmd git checkout ${branch}; then
-        cd ${thisdir}
+    if ! dryrun_cmd git --git-dir=${gitdir} --work-tree=${worktree} checkout ${branch}; then
         return 3
     fi
-    if ! dryrun_cmd git reset --hard ${rev}; then
-        cd ${thisdir}
+    if ! dryrun_cmd git --git-dir=${gitdir} --work-tree=${worktree} reset --hard ${rev}; then
         return 4
     fi
-    cd ${thisdir}
 }
 
 # error checking for buildscript repo
