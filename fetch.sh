@@ -110,20 +110,17 @@ get_head_hash () {
 # Aim to be conservative: bail if there are local changes, only advance
 #  branches if fastforward is possible.
 fetch_repo () {
-    local url="${1}"
-    local branch="${2:-master}"
-    local rev="${3:-HEAD}"
+    local name="${1}"
+    local url="${2}"
+    local branch="${3:-master}"
+    local rev="${4:-HEAD}"
+    local worktree=${name}
+    local gitdir=${name}/.git
 
     if [ -z "${url}" ]; then
         echo "fetch_repo: no URL provided"
         return 1
     fi
-
-    local name=$(echo "${url}" | \
-                 sed -n "s&^.*\/\([A-Za-z_\-]\+\)\(\.git\)\?$&\1&p")
-    local worktree=${name}
-    local gitdir=${name}/.git
-
     if [ ! -d ${name} ]; then
         echo "Cloning from repo: ${name}"
         if ! dryrun_cmd git clone --progress ${url} ${name}; then
@@ -211,7 +208,7 @@ fetch_repos () {
         if [ ! -z "${GIT_MIRROR}" ]; then
             url=$(echo ${url} | sed -n "s&^.*/\([0-9A-Za-z_-]\+\(\.git\)\?\)$&${GIT_MIRROR}/\1&p")
         fi
-        if ! fetch_repo "${url}" "${branch}" "${rev}"; then
+        if ! fetch_repo "${name}" "${url}" "${branch}" "${rev}"; then
             echo "ERROR: Failed to fetch repo from ${url}"
             exit 1
         fi
