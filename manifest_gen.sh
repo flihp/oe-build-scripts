@@ -11,7 +11,7 @@ if [ -f fetch.conf ]; then
 fi
 
 # get object hash of wherever HEAD is
-head_hash () {
+head_rev () {
     local dir=$1
     if [ ! -d ${dir} ]; then
         return 1
@@ -67,57 +67,41 @@ repo_url () {
     return $?
 }
 
+process_repo () {
+    local dir=${1}
+    local name=${2}
+
+    if [ -z ${dir} ]; then
+        echo "No directory specified"
+        return 1
+    fi
+    if [ -z ${name} ]; then
+        name=$(basename $(realpath ${dir}))
+    fi
+
+    url=$(repo_url ${dir} follow)
+    if [ $? -ne 0 ]; then
+        echo "Failed to get URL for: ${name}"
+        return 1
+    fi
+    branch=$(repo_branch ${dir})
+    if [ $? -ne 0 ]; then
+        echo "Failed to get branch name for: ${name}"
+        return 1
+    fi
+    rev=$(head_rev ${dir})
+    if [ $? -ne 0 ]; then
+        echo "Failed to get HEAD rev for: ${name}"
+        return 1
+    fi
+    echo "${name} ${url} ${branch} ${rev}"
+}
+
 process_repos () {
-    build_obj=$(head_hash ./)
-    if [ $? -ne 0 ]; then
-        echo "Failed to get HEAD object for build scripts repo"
-        exit 1
-    fi
-    build_url=$(repo_url ./ follow)
-    if [ $? -ne 0 ]; then
-        echo "Failed to get URL for build script remote"
-        return 1
-    fi
-    build_branch=$(repo_branch ./)
-    if [ $? -ne 0 ]; then
-        echo "Failed to get branch for build script remote"
-        return 1
-    fi
-    echo "oe-build-scripts ${build_url} ${build_branch} ${build_obj}"
-    bitbake_obj=$(head_hash ./bitbake)
-    if [ $? -ne 0 ]; then
-        echo "Failed to get HEAD oject for bitbake repo"
-        return 1
-    fi
-    bitbake_branch=$(repo_branch ./)
-    if [ $? -ne 0 ]; then
-        echo "Failed to get branch for bitbake repo"
-        return 1
-    fi
-    bitbake_url=$(repo_url ./bitbake follow)
-    if [ $? -ne 0 ]; then
-        echo "Failed to get URL for bitbake remote"
-        return 1
-    fi
-    echo "bitbake ${bitbake_url} ${bitbake_branch} ${bitbake_obj}"
+    process_repo ./ "oe-build-scripts"
+    process_repo ./bitbake
     ls -1 metas | while read DIR; do
-        rel_path=metas/${DIR}
-        meta_obj=$(head_hash ${rel_path})
-        if [ $? -ne 0 ]; then
-            echo "Failed to get HEAD hash for meta layer ${rel_path}"
-            return 1
-        fi
-        meta_branch=$(repo_branch ${rel_path})
-        if [ $? -ne 0 ]; then
-            echo "Failed to get branch for meta layer ${rel_path}"
-            return 1
-        fi
-        meta_url=$(repo_url ${rel_path} follow)
-        if [ $? -ne 0 ]; then
-            echo "Failed to get URL for ${rel_path} remote"
-            return 1
-        fi
-        echo "${DIR} ${meta_url} ${meta_branch} ${meta_obj}"
+        process_repo metas/${DIR}
     done
 }
 
