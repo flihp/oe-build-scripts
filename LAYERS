@@ -1,12 +1,14 @@
 # This file contains a description of all git repos used in this build.
 # This should be bitbake and a bunch of OE meta layers.
 # The format is pretty simple:
-#  name repo_url state
+#  name repo_url branch revision
 # where:
 #  'name' is just an identifier for the repo
 #  'repo_url' is the url where the git repo lives (the upstream)
-#  'state' is a git object (hash, tag, branch etc)
-# The 'state' field can be omitted and the tip of master will be used by default
+#  'branch' is a branch or tag to checkout
+#  'revision' is the desired HEAD. Requires that branch is set.
+# If branch is omitted it is assumed to be 'master'.
+# If revision is omitted it is assumed to be 'HEAD'.
 
 bitbake git://github.com/openembedded/bitbake.git
 openembedded-core git://github.com/openembedded/openembedded-core.git

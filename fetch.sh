@@ -111,51 +111,40 @@ get_head_hash () {
 #  branches if fastforward is possible.
 fetch_repo () {
     url="${1}"
-    object="${2:-master}"
+    branch="${2:-master}"
+    rev="${3:-HEAD}"
+
+    if [ -z "${url}" ]; then
+        echo "fetch_repo: no URL provided"
+        return 1
+    fi
+
     repo_name='^.*\/\([A-Za-z_\-]\+\)\(\.git\)\?$'
     name=$(echo "${url}" | sed -n "s&${repo_name}&\1&p")
-    # object from user is branch or not
-    # assume all branches specified by user are on the origin
-    git branch -a | grep -q "^\(\*\)\?[[:space:]]*remotes/origin/${object}[[:space:]]*$"
-    is_branch=$?
-
     # Make sure the repo is in a reasonable state
     # if it doesn't exist just clone it
     if [ ! -d ${name} ]; then
         echo "Cloning from repo: ${name}"
-        dryrun_cmd git clone --progress ${url} ${name}
-        if [ $? -ne 0 ]; then
-            return $?
+        if ! dryrun_cmd git clone --progress ${url} ${name}; then
+            cd ${thisdir}
+            return 1
+        fi
+    else
+        echo "Fetching repo: ${name}"
+        if ! dryrun_cmd git --git-dir=./${name}/.git fetch --progress; then
+            return 2
         fi
     fi
 
     local thisdir=$(pwd)
-    if [ ! -e ${name} ]; then
-        mkdir ${name}
-    fi
     cd ${name}
-    # an extra fetch is redundant for new clones but it doesn't hurt
-    dryrun_cmd git fetch --progress
-    if [ ${is_branch} -eq 0 ]; then
-        # object is a branch: check it out
-        dryrun_cmd git checkout ${object}
-        if [ $? -ne 0 ]; then
-            cd ${thisdir}
-            return $?
-        fi
-        # and pull w/o merge
-        dryrun_cmd git pull --ff-only --progress
-        if [ $? -ne 0 ]; then
-            cd ${thisdir}
-            return $?
-        fi
-    else
-        # not a branch: just reset hard to the object
-        dryrun_cmd git reset --hard ${object}
-        if [ $? -ne 0 ]; then
-            cd ${thisdir}
-            return $?
-        fi
+    if ! dryrun_cmd git checkout ${branch}; then
+        cd ${thisdir}
+        return 3
+    fi
+    if ! dryrun_cmd git reset --hard ${rev}; then
+        cd ${thisdir}
+        return 4
     fi
     cd ${thisdir}
 }
@@ -204,7 +193,7 @@ fetch_repos () {
     local thisdir=$(pwd)
     cat ./LAYERS | \
         grep -v '^\([[:space:]]*$\|[[:space:]]*#\)' | \
-        while read name url branch;
+        while read name url branch rev;
     do
         if [ -z ${url} ] | [ -z ${name} ]; then
             echo "ERROR: format error in LAYERS file."
@@ -214,7 +203,7 @@ fetch_repos () {
         # checked out. We handle this repo separately because we don't change
         # it.
         if [ ${name} = "oe-build-scripts" ]; then
-            handle_buildscripts ${name} ${url} ${branch}
+            handle_buildscripts "${name}" "${url}" "${branch}" "${rev}"
         fi
         # we put bitbake in the top level dir
         # we put all other repos (meta-layers) in METAS_DIR
@@ -227,7 +216,7 @@ fetch_repos () {
         if [ ! -z "${GIT_MIRROR}" ]; then
             url=$(echo ${url} | sed -n "s&^.*/\([0-9A-Za-z_-]\+\(\.git\)\?\)$&${GIT_MIRROR}/\1&p")
         fi
-        if ! fetch_repo "${url}" "${branch}"; then
+        if ! fetch_repo "${url}" "${branch}" "${rev}"; then
             echo "ERROR: Failed to fetch repo from ${url}"
             exit 1
         fi
