@@ -10,6 +10,6 @@
 # If branch is omitted it is assumed to be 'master'.
 # If revision is omitted it is assumed to be 'HEAD'.
 
-bitbake git://github.com/openembedded/bitbake.git
-openembedded-core git://github.com/openembedded/openembedded-core.git
+bitbake git://github.com/openembedded/bitbake.git master HEAD
+openembedded-core git://github.com/openembedded/openembedded-core.git master HEAD
 
