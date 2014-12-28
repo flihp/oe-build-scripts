@@ -1,7 +1,9 @@
 bitbake.lock
 pseudodone
+cache/
 conf/sanity_info
 build.log
-downloads
-bitbake
-metas
+downloads/
+fetch.conf
+metas/
+tmp-glibc/
