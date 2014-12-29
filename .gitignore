@@ -6,4 +6,5 @@ build.log
 downloads/
 fetch.conf
 metas/
+sstate-cache/
 tmp-glibc/
