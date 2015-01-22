@@ -2,6 +2,23 @@
 
 from __future__ import print_function
 import json
+import sys
+
+class BBLayerSerializer:
+    def __init__(self, base, repos=[]):
+        self._base = base
+        self._repos = repos
+    def add_repo(self, repo):
+        self._repos.append(repo)
+    def write(self, fd=sys.stdout):
+        fd.write("LCONF_VERSION = \"5\"\n")
+        fd.write("BBPATH = \"${TOPDIR}\"\n")
+        fd.write("BBLAYERS = \" \\\n")
+        for repo in self._repos:
+            if repo._layers is not None:
+                for layer in repo._layers:
+                    fd.write("    ${{TOPDIR}}/{0}/{1}/{2} \\\n".format(self._base, repo._name, layer))
+        fd.write("\"\n")
 
 class RepoFetcher:
     def __init__(self, base, repos=[]):
@@ -48,6 +65,9 @@ def main():
                                        repo.get("layers", ["./"])))
 
     print(fetcher, end='')
+    bblayers = BBLayerSerializer("./metas", repos=fetcher._repos)
+    with open('bblayers.conf', 'w') as test_file:
+        bblayers.write(fd=test_file)
 
 if __name__ == '__main__':
     main()
