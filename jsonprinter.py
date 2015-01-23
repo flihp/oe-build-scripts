@@ -7,7 +7,12 @@ import sys
 class BBLayerSerializer:
     def __init__(self, base, repos=[]):
         self._base = base
-        self._repos = repos
+        self._repos = []
+        for repo in repos:
+            if type(repo) is LayerRepo:
+                self._repos.append(repo)
+            else:
+                raise TypeError
     def add_repo(self, repo):
         self._repos.append(repo)
     def write(self, fd=sys.stdout):
@@ -23,7 +28,12 @@ class BBLayerSerializer:
 class RepoFetcher:
     def __init__(self, base, repos=[]):
         self._base = base
-        self._repos = repos
+        self._repos = []
+        for repo in repos:
+            if type(repo) is LayerRepo:
+                self._repos.append(repo)
+            else:
+                raise TypeError
     def add_repo(self, repo):
         self._repos.append(repo)
     def __str__(self):
@@ -31,7 +41,7 @@ class RepoFetcher:
     def checkout(self):
         raise NotImplementedError
 
-class LayerRepo:
+class LayerRepo(object):
     def __init__(self, name, url, branch="master", revision="head", layers=["./"]):
         self._name = name
         self._url = url
