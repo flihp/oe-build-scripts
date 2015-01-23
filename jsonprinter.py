@@ -82,7 +82,9 @@ class LayerEncoder(JSONEncoder):
         dict_tmp["url"] = obj._url
         if obj._branch != "master":
             dict_tmp["branch"] = obj._branch
-        if obj._layers is not None:
+        if obj._layers is None:
+            dict_tmp["layers"] = obj._layers
+        elif len(obj._layers) > 1 or obj._layers[0] != "./":
             dict_tmp["layers"] = obj._layers
         return dict_tmp
 
