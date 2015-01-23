@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import json
+from json import JSONEncoder
 import sys
 
 class BBLayerSerializer:
@@ -25,7 +26,7 @@ class BBLayerSerializer:
                     fd.write("    ${{TOPDIR}}/{0}/{1}/{2} \\\n".format(self._base, repo._name, layer))
         fd.write("\"\n")
 
-class RepoFetcher:
+class RepoFetcher(object):
     def __init__(self, base, repos=[]):
         self._base = base
         self._repos = []
@@ -61,6 +62,29 @@ class LayerRepo(object):
                 "revision: {3}\n"
                 "layers:   {4}\n".format(self._name, self._url, self._branch,
                                          self._revision,self._layers))
+class FetcherEncoder(JSONEncoder):
+    def default(self, obj):
+        if type(obj) is not RepoFetcher:
+            raise TypeError
+        if obj._repos is None:
+            raise ValueError
+        list_tmp = []
+        for repo in obj._repos:
+            list_tmp.append(LayerEncoder().default(repo))
+        return list_tmp
+
+class LayerEncoder(JSONEncoder): 
+    def default(self, obj):
+        if type(obj) is not LayerRepo:
+            raise TypeError
+        dict_tmp = {}
+        dict_tmp["name"] = obj._name
+        dict_tmp["url"] = obj._url
+        if obj._branch != "master":
+            dict_tmp["branch"] = obj._branch
+        if obj._layers is not None:
+            dict_tmp["layers"] = obj._layers
+        return dict_tmp
 
 def main():
     fetcher = RepoFetcher("./metas")
@@ -78,6 +102,14 @@ def main():
     bblayers = BBLayerSerializer("./metas", repos=fetcher._repos)
     with open('bblayers.conf', 'w') as test_file:
         bblayers.write(fd=test_file)
+    print("serializing a single LayerRepo to JSON:")
+    print(LayerEncoder().encode(fetcher._repos[0]))
+    print("serializing a single LayerRepo to JSON with dumps")
+    print(json.dumps(fetcher._repos[0], indent=4, cls=LayerEncoder))
+    print("serializing a RepoFetcher to JSON:")
+    print(FetcherEncoder().encode(fetcher))
+    print("serializing a RepoFetcher to JSON with dumps")
+    print(json.dumps(fetcher, indent=4, cls=FetcherEncoder))
 
 if __name__ == '__main__':
     main()
