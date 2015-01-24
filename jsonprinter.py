@@ -6,6 +6,8 @@ from json import JSONEncoder,JSONDecoder
 import sys
 
 class BBLayerSerializer:
+    """ Class to serialize a collection of LayerRepo objects into bblayer form.
+    """
     def __init__(self, base, repos=[]):
         self._base = base
         self._repos = []
@@ -27,6 +29,8 @@ class BBLayerSerializer:
         fd.write("\"\n")
 
 class RepoFetcher(object):
+    """ Class to manage git repo state.
+    """
     def __init__(self, base, repos=[]):
         self._base = base
         self._repos = []
@@ -43,6 +47,8 @@ class RepoFetcher(object):
         raise NotImplementedError
 
 class LayerRepo(object):
+    """ Data required to clone a git repo in a specific state.
+    """
     def __init__(self, name, url, branch="master", revision="head", layers=["./"]):
         self._name = name
         self._url = url
@@ -62,7 +68,13 @@ class LayerRepo(object):
                 "revision: {3}\n"
                 "layers:   {4}\n".format(self._name, self._url, self._branch,
                                          self._revision,self._layers))
+
 class FetcherEncoder(JSONEncoder):
+    """ Encode RepoFetcher object as JSON
+
+    Pass this class to the dumps function from the json module alnog with your
+    RepoFetcher object.
+    """
     def default(self, obj):
         if type(obj) is not RepoFetcher:
             raise TypeError
@@ -74,6 +86,11 @@ class FetcherEncoder(JSONEncoder):
         return list_tmp
 
 class LayerEncoder(JSONEncoder): 
+    """ Encode a LayerRepo object as JSON
+
+    Pass this class to the dumps function from the json module along with your
+    LayerRepo object.
+    """
     def default(self, obj):
         if type(obj) is not LayerRepo:
             raise TypeError
