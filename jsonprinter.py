@@ -42,9 +42,9 @@ class BBLayerSerializer:
         fd: A file object where the bblayer.conf file will be written.
             The default is sys.stdout.
         """
-        fd.write("LCONF_VERSION = \"5\"\n")
-        fd.write("BBPATH = \"${TOPDIR}\"\n")
-        fd.write("BBLAYERS = \" \\\n")
+        fd.write("LCONF_VERSION ?= \"5\"\n")
+        fd.write("BBPATH ?= \"${TOPDIR}\"\n")
+        fd.write("BBLAYERS ?= \" \\\n")
         for repo in self._repos:
             if repo._layers is not None:
                 for layer in repo._layers:
@@ -204,12 +204,16 @@ def repo_decode(json_obj):
                      json_obj.get("revision", "HEAD"),
                      json_obj.get("layers", ["./"]))
 
-def setup(repo_file, src_dir="./sources", conf_dir="./conf"):
+def setup(args):
     """ Setup build structure.
     """
+    conf_dir = args.conf_dir
+    repo_json = args.repos_json
+    src_dir = args.src_dir
+
     bblayers_file = conf_dir + "/bblayers.conf"
     # Parse JSON file with repo data
-    with open(repo_file, 'r') as repos_fd:
+    with open(repo_json, 'r') as repos_fd:
         while True:
             try:
                 repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
@@ -223,12 +227,13 @@ def setup(repo_file, src_dir="./sources", conf_dir="./conf"):
     # create bblayers.conf file, don't overwrite
     if not os.path.isdir(conf_dir):
         os.mkdir(conf_dir)
-    bblayers = BBLayerSerializer(conf_dir, repos=fetcher._repos)
+    bblayers = BBLayerSerializer(src_dir, repos=fetcher._repos)
     if os.path.exists(bblayers_file):
         raise ValueError(bblayers_file + " already exists");
     with open(bblayers_file, 'w') as test_file:
         bblayers.write(fd=test_file)
     return
+
 """
     print("serializing a single Repo to JSON:")
     print(RepoEncoder().encode(fetcher._repos[0]))
@@ -240,33 +245,28 @@ def setup(repo_file, src_dir="./sources", conf_dir="./conf"):
     print(json.dumps(fetcher, indent=4, cls=FetcherEncoder))
 """
 
-""" A sort of function table for the actions this script performs.
-"""
-actions = {
-    "setup": setup
-}
-
 def main():
     description = "Manage OE build infrastructure."
     repos_json_help = "A JSON file describing the state of the repos."
-    action_help = "An action to perform on the build directory. Possible " \
-                  "values are: setup."
+    action_help = "An action to perform on the build directory."
+    conf_dir_help = "Directory where all local bitbake configs live."
+    setup_help = "Setup the OE build directory. This includes cloning the " \
+            "repos from the JSON file and creating the bblayers.conf " \
+            "file."
     source_dir_help = "Checkout git repos into this directory."
 
     parser = argparse.ArgumentParser(prog=__file__, description=description)
-    parser.add_argument("action", help=action_help)
-    parser.add_argument("-r", "--repos-json", help=repos_json_help)
-    parser.add_argument("-s", "--source-dir", help=source_dir_help)
+    actionparser = parser.add_subparsers(help=action_help)
+    # parser for 'setup' action
+    setup_parser = actionparser.add_parser("setup", help=setup_help)
+    setup_parser.add_argument("-c", "--conf-dir", default="conf", help=conf_dir_help)
+    setup_parser.add_argument("-r", "--repos-json", default="LAYERS.json", help=repos_json_help)
+    setup_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
+    setup_parser.set_defaults(func=setup)
     args = parser.parse_args()
-    action = args.action
-    repo_file = args.repos_json
-    source_dir = args.source_dir
-    
-    try:
-        actions[action](repo_file, src_dir=source_dir)
-    except KeyError:
-        parser.print_help()
-    return
+    args.func(args)
+
+    return 
 
 if __name__ == '__main__':
     main()
