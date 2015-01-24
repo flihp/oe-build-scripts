@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 import json
-from json import JSONEncoder
+from json import JSONEncoder,JSONDecoder
 import sys
 
 class BBLayerSerializer:
@@ -88,18 +88,30 @@ class LayerEncoder(JSONEncoder):
             dict_tmp["layers"] = obj._layers
         return dict_tmp
 
+def repo_decode(json_obj):
+    """ Create a repository object from a dictionary.
+
+    Intended for use in JSON deserialization.
+    """
+    if type(json_obj) is not dict:
+        raise TypeError
+    return LayerRepo(json_obj["name"],
+                     json_obj["url"],
+                     json_obj.get("branch", "master"),
+                     json_obj.get("revision", "HEAD"),
+                     json_obj.get("layers", ["./"]))
+
 def main():
     fetcher = RepoFetcher("./metas")
 
+    # Decode layers in JSON reprensentation from file 
     with open('LAYERS.json', 'r') as json_data:
-        data = json.load(json_data)
-        for repo in data:
-            fetcher.add_repo(LayerRepo(repo["name"],
-                                       repo["url"],
-                                       repo.get("branch","master"),
-                                       repo.get("revision", "HEAD"),
-                                       repo.get("layers", ["./"])))
-
+        while True:
+            try:
+                repos = JSONDecoder(object_hook=repo_decode).decode(json_data.read())
+                fetcher = RepoFetcher("./metas", repos=repos)
+            except ValueError:
+                break;
     print(fetcher, end='')
     bblayers = BBLayerSerializer("./metas", repos=fetcher._repos)
     with open('bblayers.conf', 'w') as test_file:
