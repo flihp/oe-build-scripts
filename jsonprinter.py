@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+
+import argparse
 import json
 from json import JSONEncoder,JSONDecoder
+import os
+import subprocess
 import sys
+
+""" This is a utility to manage an OE build directory.
+"""
 
 class BBLayerSerializer:
     """ Class to serialize a collection of Repo objects into bblayer form.
@@ -43,8 +50,9 @@ class RepoFetcher(object):
         self._repos.append(repo)
     def __str__(self):
         return ''.join(str(repo) for repo in self._repos)
-    def checkout(self):
-        raise NotImplementedError
+    def clone(self):
+        for repo in self._repos:
+            repo.clone(self._base)
 
 class Repo(object):
     """ Data required to clone a git repo in a specific state.
@@ -68,7 +76,19 @@ class Repo(object):
                 "revision: {3}\n"
                 "layers:   {4}\n".format(self._name, self._url, self._branch,
                                          self._revision,self._layers))
-
+    def clone(self, path):
+        dest = path + "/" + self._name
+        try:
+            if not os.path.exists(dest):
+                print("cloning {0} into {1}".format (self._name, path))
+                return subprocess.call(
+                    ['git', 'clone', '--progress', self._url, dest], shell=False
+                )
+            else:
+                return 1
+        except subprocess.CalledProcessError, e:
+            print(e)
+ 
 class FetcherEncoder(JSONEncoder):
     """ Encode RepoFetcher object as JSON
 
@@ -118,21 +138,32 @@ def repo_decode(json_obj):
                      json_obj.get("revision", "HEAD"),
                      json_obj.get("layers", ["./"]))
 
-def main():
-    fetcher = RepoFetcher("./metas")
-
-    # Decode layers in JSON reprensentation from file 
-    with open('LAYERS.json', 'r') as json_data:
+def setup(repo_file, src_dir="./sources", conf_dir="./conf"):
+    """ Setup build structure.
+    """
+    bblayers_file = conf_dir + "/bblayers.conf"
+    # Parse JSON file with repo data
+    with open(repo_file, 'r') as repos_fd:
         while True:
             try:
-                repos = JSONDecoder(object_hook=repo_decode).decode(json_data.read())
-                fetcher = RepoFetcher("./metas", repos=repos)
+                repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
+                fetcher = RepoFetcher(src_dir, repos=repos)
             except ValueError:
                 break;
-    print(fetcher, end='')
-    bblayers = BBLayerSerializer("./metas", repos=fetcher._repos)
-    with open('bblayers.conf', 'w') as test_file:
+    # fetch repos
+    if not os.path.isdir(src_dir):
+        os.mkdir(src_dir)
+    fetcher.clone()
+    # create bblayers.conf file, don't overwrite
+    if not os.path.isdir(conf_dir):
+        os.mkdir(conf_dir)
+    bblayers = BBLayerSerializer(conf_dir, repos=fetcher._repos)
+    if os.path.exists(bblayers_file):
+        raise ValueError(bblayers_file + " already exists");
+    with open(bblayers_file, 'w') as test_file:
         bblayers.write(fd=test_file)
+    return
+"""
     print("serializing a single Repo to JSON:")
     print(RepoEncoder().encode(fetcher._repos[0]))
     print("serializing a single Repo to JSON with dumps")
@@ -141,6 +172,35 @@ def main():
     print(FetcherEncoder().encode(fetcher))
     print("serializing a RepoFetcher to JSON with dumps")
     print(json.dumps(fetcher, indent=4, cls=FetcherEncoder))
+"""
+
+""" A sort of function table for the actions this script performs.
+"""
+actions = {
+    "setup": setup
+}
+
+def main():
+    description = "Manage OE build infrastructure."
+    repos_json_help = "A JSON file describing the state of the repos."
+    action_help = "An action to perform on the build directory. Possible " \
+                  "values are: setup"
+    source_dir_help = "Checkout git repos into this directory."
+
+    parser = argparse.ArgumentParser(prog=__file__, description=description)
+    parser.add_argument("action", help=action_help)
+    parser.add_argument("-r", "--repos-json", help=repos_json_help)
+    parser.add_argument("-s", "--source-dir", help=source_dir_help)
+    args = parser.parse_args()
+    action = args.action
+    repo_file = args.repos_json
+    source_dir = args.source_dir
+    
+    try:
+        actions[action](repo_file, src_dir=source_dir)
+    except KeyError:
+        parser.print_help()
+    return
 
 if __name__ == '__main__':
     main()
