@@ -6,13 +6,13 @@ from json import JSONEncoder,JSONDecoder
 import sys
 
 class BBLayerSerializer:
-    """ Class to serialize a collection of LayerRepo objects into bblayer form.
+    """ Class to serialize a collection of Repo objects into bblayer form.
     """
     def __init__(self, base, repos=[]):
         self._base = base
         self._repos = []
         for repo in repos:
-            if type(repo) is LayerRepo:
+            if type(repo) is Repo:
                 self._repos.append(repo)
             else:
                 raise TypeError
@@ -35,7 +35,7 @@ class RepoFetcher(object):
         self._base = base
         self._repos = []
         for repo in repos:
-            if type(repo) is LayerRepo:
+            if type(repo) is Repo:
                 self._repos.append(repo)
             else:
                 raise TypeError
@@ -46,7 +46,7 @@ class RepoFetcher(object):
     def checkout(self):
         raise NotImplementedError
 
-class LayerRepo(object):
+class Repo(object):
     """ Data required to clone a git repo in a specific state.
     """
     def __init__(self, name, url, branch="master", revision="head", layers=["./"]):
@@ -82,17 +82,17 @@ class FetcherEncoder(JSONEncoder):
             raise ValueError
         list_tmp = []
         for repo in obj._repos:
-            list_tmp.append(LayerEncoder().default(repo))
+            list_tmp.append(RepoEncoder().default(repo))
         return list_tmp
 
-class LayerEncoder(JSONEncoder): 
-    """ Encode a LayerRepo object as JSON
+class RepoEncoder(JSONEncoder): 
+    """ Encode a Repo object as JSON
 
     Pass this class to the dumps function from the json module along with your
-    LayerRepo object.
+    Repo object.
     """
     def default(self, obj):
-        if type(obj) is not LayerRepo:
+        if type(obj) is not Repo:
             raise TypeError
         dict_tmp = {}
         dict_tmp["name"] = obj._name
@@ -112,7 +112,7 @@ def repo_decode(json_obj):
     """
     if type(json_obj) is not dict:
         raise TypeError
-    return LayerRepo(json_obj["name"],
+    return Repo(json_obj["name"],
                      json_obj["url"],
                      json_obj.get("branch", "master"),
                      json_obj.get("revision", "HEAD"),
@@ -133,10 +133,10 @@ def main():
     bblayers = BBLayerSerializer("./metas", repos=fetcher._repos)
     with open('bblayers.conf', 'w') as test_file:
         bblayers.write(fd=test_file)
-    print("serializing a single LayerRepo to JSON:")
-    print(LayerEncoder().encode(fetcher._repos[0]))
-    print("serializing a single LayerRepo to JSON with dumps")
-    print(json.dumps(fetcher._repos[0], indent=4, cls=LayerEncoder))
+    print("serializing a single Repo to JSON:")
+    print(RepoEncoder().encode(fetcher._repos[0]))
+    print("serializing a single Repo to JSON with dumps")
+    print(json.dumps(fetcher._repos[0], indent=4, cls=RepoEncoder))
     print("serializing a RepoFetcher to JSON:")
     print(FetcherEncoder().encode(fetcher))
     print("serializing a RepoFetcher to JSON with dumps")
