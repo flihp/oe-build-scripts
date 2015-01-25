@@ -204,6 +204,43 @@ def repo_decode(json_obj):
                      json_obj.get("revision", "HEAD"),
                      json_obj.get("layers", ["./"]))
 
+def manifest(args):
+    """ Create manifest in JSON describing current state of repos.
+    """
+    repo_json = args.repos_json
+    src_dir = args.src_dir
+
+    print("repo_json: {0}".format(repo_json))
+    print("src_dir: {0}".format(src_dir))
+    # Create Repo objects from repos in src_dir
+    fetcher = RepoFetcher(src_dir)
+    subdirs = os.listdir(src_dir)
+    for item in subdirs:
+        repo_root = os.path.join(src_dir, item)
+        git_dir = os.path.join(repo_root, ".git")
+        # check that directory is a git repo
+        if os.path.isdir(git_dir):
+            # collect data from git repo
+            rev = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"]
+            ).rstrip()
+            branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"]
+            ).rstrip()
+            remote = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]
+            ).split("/")[0].rstrip()
+            url = subprocess.check_output(
+                ["git", "config", "--get", "remote." + remote + ".url"]
+            ).rstrip()
+            fetcher.add_repo(Repo(item, url, branch=branch, revision=rev))
+        else:
+            print("Not a git repo, skipping: {0}".format(git_dir))
+    # Serialize Repo objects to JSON manifest
+    with open(repo_json, 'w') as repo_json_fd:
+        json.dump(fetcher, repo_json_fd, indent=4, cls=FetcherEncoder)
+    return
+
 def setup(args):
     """ Setup build structure.
     """
@@ -250,6 +287,7 @@ def main():
     repos_json_help = "A JSON file describing the state of the repos."
     action_help = "An action to perform on the build directory."
     conf_dir_help = "Directory where all local bitbake configs live."
+    manifest_help = "Generate JSON manifest describing current state of repos."
     setup_help = "Setup the OE build directory. This includes cloning the " \
             "repos from the JSON file and creating the bblayers.conf " \
             "file."
@@ -263,6 +301,12 @@ def main():
     setup_parser.add_argument("-r", "--repos-json", default="LAYERS.json", help=repos_json_help)
     setup_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
     setup_parser.set_defaults(func=setup)
+    # parser for 'manifest' action
+    manifest_parser = actionparser.add_parser("manifest", help=manifest_help)
+    manifest_parser.add_argument("-r", "--repos-json", default=sys.stdout, help=repos_json_help)
+    manifest_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
+    manifest_parser.set_defaults(func=manifest)
+
     args = parser.parse_args()
     args.func(args)
 
