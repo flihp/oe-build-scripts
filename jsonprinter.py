@@ -204,6 +204,38 @@ def repo_decode(json_obj):
                      json_obj.get("revision", "HEAD"),
                      json_obj.get("layers", ["./"]))
 
+def layers_from_bblayers(bblayers_fd):
+    """ Parse the layers from the bblayers.conf file
+
+    bblayers_fd: A file object attached to the bblayers.conf file
+    """
+    front = ""
+    while True:
+        cur = bblayers_fd.read(1)
+        if not front.endswith("BBLAYERS"):
+            front += cur
+        else:
+            break
+    # Gobble till first paren
+    while True:
+        cur = bblayers_fd.read(1)
+        if cur == '\"':
+            break
+        # collect all characters till the next paren
+    layers = ""
+    while True:
+        cur = bblayers_fd.read(1)
+        if cur == '\"' and not layers.endswith('\\'):
+            break
+        else:
+            if cur == '\n':
+                layers += ' '
+            else:
+                layers += cur
+
+    tmp =  " ".join(layers.split())
+    return tmp
+
 def manifest(args):
     """ Create manifest in JSON describing current state of repos.
     """
@@ -211,14 +243,14 @@ def manifest(args):
     src_dir = args.src_dir
     bblayers_file = args.bblayers
 
-    print("repo_json: {0}".format(repo_json))
-    print("src_dir: {0}".format(src_dir))
+    # Get layers from bblayers.conf
+    with open(bblayers_file, 'r') as bblayers_fd:
+        layers = layers_from_bblayers(bblayers_fd)
+ 
     # Create Repo objects from repos in src_dir
     fetcher = RepoFetcher(src_dir)
     subdirs = os.listdir(src_dir)
-    print("subdirs: {0}".format(subdirs))
     for item in subdirs:
-        print("item: {0}".format(item))
         repo_root = os.path.join(src_dir, item)
         git_dir = os.path.join(repo_root, ".git")
         # check that directory is a git repo
@@ -236,37 +268,6 @@ def manifest(args):
             url = subprocess.check_output(
                 ["git", "config", "--get", "remote." + remote + ".url"]
             ).rstrip()
-            # find layers in repo, match to entries in bblayers.conf
-            # this is the most orrible thing I've ever done
-            with open(bblayers_file, 'r') as bblayers_fd:
-                front = ""
-                while True:
-                    cur = bblayers_fd.read(1)
-                    if not front.endswith("BBLAYERS"):
-                        front += cur
-                    else:
-                        break
-                # Gobble till first paren
-                while True:
-                    cur = bblayers_fd.read(1)
-                    if cur == '\"':
-                        break
-                # collect all characters till the next paren
-                layers = ""
-                while True:
-                    cur = bblayers_fd.read(1)
-                    if cur == '\"' and not layers.endswith('\\'):
-                        break
-                    else:
-                        if cur == '\n':
-                            layers += ' '
-                        else:
-                            layers += cur
-
-            tmp = " ".join(layers.split())
-            print("Layers from bblayers.conf:{0}".format(tmp))
-            repo_layer = []
-
             # get layers in the repo we're processing
             metas = []
             for thing in subprocess.check_output(
@@ -274,23 +275,17 @@ def manifest(args):
             ).strip().split('\n'):
                 if os.path.exists(thing):
                     metas.append(thing)
-            print("metas: {0}".format(metas))
 
+            # find layers that are active in each repo
+            repo_layer = []
             for layer in metas:
-                print("unstripped: {0}".format(layer))
                 layer = os.path.dirname(os.path.dirname(layer))
-                print("Gota layer: {0}".format(layer))
-                print("Strip lstuff: {0}".format(layer[len(src_dir):]))
-                if layer in tmp:
-                    repo_layer.append(layer)
+                if layer in layers:
+                    repo_layer.append(layer[len(src_dir):])
 
             if repo_layer == []:
                 repo_layer = None
-            print("We're using: {0}".format(repo_layer))
             fetcher.add_repo(Repo(item, url, branch=branch, revision=rev, layers=repo_layer))
-        else:
-            print("Not a git repo, skipping: {0}".format(git_dir))
-    # find layers that are active in each repo
     # Serialize Repo objects to JSON manifest
     with open(repo_json, 'w') as repo_json_fd:
         json.dump(fetcher, repo_json_fd, indent=4, cls=FetcherEncoder)
