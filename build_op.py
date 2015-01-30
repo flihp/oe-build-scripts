@@ -3,9 +3,13 @@
 from __future__ import print_function
 
 import argparse
+import fileinput
 import json
 from json import JSONEncoder,JSONDecoder
 import os
+import re
+import shutil
+import stat
 import subprocess
 import sys
 
@@ -309,12 +313,22 @@ def manifest(args):
 def setup(args):
     """ Setup build structure.
     """
+    build_type = args.build_type
     conf_dir = args.conf_dir
-    repo_json = args.repos_json
     src_dir = args.src_dir
+
+    # sanity test existence of build_type
+    # need files: LAYERS_build-type.json, local_build-type.conf
+    local_conf = os.path.join(conf_dir, "local.conf")
+    local_conf_orig = os.path.join(conf_dir, "local_" + build_type + ".conf")
+    env_sh = "environment.sh"
+    env_sh_template = "environment.sh.template"
+    if not os.path.exists(local_conf_orig):
+        raise ValueError("no config to copy: " + local_conf_orig)
 
     bblayers_file = conf_dir + "/bblayers.conf"
     # Parse JSON file with repo data
+    repo_json = "LAYERS_" + build_type + ".json"
     with open(repo_json, 'r') as repos_fd:
         while True:
             try:
@@ -334,6 +348,15 @@ def setup(args):
         raise ValueError(bblayers_file + " already exists");
     with open(bblayers_file, 'w') as test_file:
         bblayers.write(fd=test_file)
+    # copy local.conf.type -> local.conf
+    shutil.copy(local_conf_orig, local_conf)
+    # generate environment.sh
+    shutil.copy(env_sh_template, env_sh)
+    os.chmod(env_sh, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
+    for line in fileinput.input(env_sh, inplace=1):
+        line = re.sub("@sources@", src_dir, line.rstrip())
+        print(line)
+
     return
 
 """
@@ -360,14 +383,15 @@ def main():
     source_dir_help = "Checkout git repos into this directory."
     top_dir_help = "Root of build directory. This is TOPDIR in OE. Defaults " \
             "to the current working directory."
+    build_type_help = "The type of the build to setup."
 
     parser = argparse.ArgumentParser(prog=__file__, description=description)
     actionparser = parser.add_subparsers(help=action_help)
     # parser for 'setup' action
     setup_parser = actionparser.add_parser("setup", help=setup_help)
     setup_parser.add_argument("-c", "--conf-dir", default="conf", help=conf_dir_help)
-    setup_parser.add_argument("-r", "--repos-json", default="LAYERS.json", help=repos_json_help)
     setup_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
+    setup_parser.add_argument("-b", "--build-type", default="core", help=build_type_help)
     setup_parser.set_defaults(func=setup)
     # parser for 'manifest' action
     manifest_parser = actionparser.add_parser("manifest", help=manifest_help)
