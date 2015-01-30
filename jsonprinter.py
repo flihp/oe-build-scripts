@@ -204,9 +204,11 @@ def repo_decode(json_obj):
                      json_obj.get("revision", "HEAD"),
                      json_obj.get("layers", ["./"]))
 
-def layers_from_bblayers(bblayers_fd):
+def layers_from_bblayers(top_dir, bblayers_fd):
     """ Parse the layers from the bblayers.conf file
 
+    top_dir: The absolute path to replace occurrences of TOPDIR in the
+             bblayers.conf file.
     bblayers_fd: A file object attached to the bblayers.conf file
     """
     front = ""
@@ -221,7 +223,7 @@ def layers_from_bblayers(bblayers_fd):
         cur = bblayers_fd.read(1)
         if cur == '\"':
             break
-        # collect all characters till the next paren
+    # collect all characters till the next paren
     layers = ""
     while True:
         cur = bblayers_fd.read(1)
@@ -233,19 +235,41 @@ def layers_from_bblayers(bblayers_fd):
             else:
                 layers += cur
 
-    tmp =  " ".join(layers.split())
+    # strip newlines and extra whitespace
+    tmp =  " ".join(layers.replace("${TOPDIR}", top_dir).split())
     return tmp
+
+def repo_state(git_dir):
+    """ Collect the url, branch and revision of the parameter git repo
+
+    git_dir: The file path to a local git clone.
+    returns a tripple (url, branch, rev)
+    """
+    rev = subprocess.check_output(
+        ["git", "--git-dir", git_dir, "rev-parse", "HEAD"]
+    ).rstrip()
+    branch = subprocess.check_output(
+        ["git", "--git-dir", git_dir, "rev-parse", "--abbrev-ref", "HEAD"]
+    ).rstrip()
+    remote = subprocess.check_output(
+        ["git", "--git-dir", git_dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]
+    ).split("/")[0].rstrip()
+    url = subprocess.check_output(
+        ["git", "--git-dir", git_dir, "config", "--get", "remote." + remote + ".url"]
+    ).rstrip()
+    return url, branch, rev
 
 def manifest(args):
     """ Create manifest in JSON describing current state of repos.
     """
-    repo_json = args.repos_json
-    src_dir = args.src_dir
-    bblayers_file = args.bblayers
+    top_dir = os.path.abspath(args.top_dir)
+    repo_json = os.path.abspath(args.repos_json)
+    src_dir = os.path.abspath(args.src_dir)
+    bblayers_file = os.path.abspath(args.bblayers)
 
     # Get layers from bblayers.conf
     with open(bblayers_file, 'r') as bblayers_fd:
-        layers = layers_from_bblayers(bblayers_fd)
+        layers = layers_from_bblayers(top_dir, bblayers_fd)
  
     # Create Repo objects from repos in src_dir
     fetcher = RepoFetcher(src_dir)
@@ -256,18 +280,7 @@ def manifest(args):
         # check that directory is a git repo
         if os.path.isdir(git_dir):
             # collect data from git repo
-            rev = subprocess.check_output(
-                ["git", "rev-parse", "HEAD"]
-            ).rstrip()
-            branch = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"]
-            ).rstrip()
-            remote = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]
-            ).split("/")[0].rstrip()
-            url = subprocess.check_output(
-                ["git", "config", "--get", "remote." + remote + ".url"]
-            ).rstrip()
+            url, branch, rev = repo_state(git_dir)
             # get layers in the repo we're processing
             metas = []
             for thing in subprocess.check_output(
@@ -276,12 +289,14 @@ def manifest(args):
                 if os.path.exists(thing):
                     metas.append(thing)
 
-            # find layers that are active in each repo
+            # find layers that are active in each repo 
             repo_layer = []
             for layer in metas:
                 layer = os.path.dirname(os.path.dirname(layer))
                 if layer in layers:
-                    repo_layer.append(layer[len(src_dir):])
+                    # strip leading directory component from layer path
+                    # including directory separator character
+                    repo_layer.append(layer[len(repo_root) + 1:])
 
             if repo_layer == []:
                 repo_layer = None
@@ -343,6 +358,8 @@ def main():
             "repos from the JSON file and creating the bblayers.conf " \
             "file."
     source_dir_help = "Checkout git repos into this directory."
+    top_dir_help = "Root of build directory. This is TOPDIR in OE. Defaults " \
+            "to the current working directory."
 
     parser = argparse.ArgumentParser(prog=__file__, description=description)
     actionparser = parser.add_subparsers(help=action_help)
@@ -357,6 +374,7 @@ def main():
     manifest_parser.add_argument("-b", "--bblayers", default="conf/bblayers.conf", help=bblayers_help)
     manifest_parser.add_argument("-r", "--repos-json", default=sys.stdout, help=repos_json_help)
     manifest_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
+    manifest_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
     manifest_parser.set_defaults(func=manifest)
 
     args = parser.parse_args()
