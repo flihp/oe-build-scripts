@@ -313,9 +313,11 @@ def manifest(args):
 def setup(args):
     """ Setup build structure.
     """
+    top_dir = args.top_dir
     build_type = args.build_type
-    conf_dir = args.conf_dir
-    src_dir = args.src_dir
+    conf_dir = os.path.join(top_dir, args.conf_dir)
+    src_dir_abs = os.path.join(top_dir, args.src_dir)
+    src_dir_rel = args.src_dir
 
     # sanity test existence of build_type
     # need files: LAYERS_build-type.json, local_build-type.conf
@@ -333,28 +335,28 @@ def setup(args):
         while True:
             try:
                 repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
-                fetcher = RepoFetcher(src_dir, repos=repos)
+                fetcher = RepoFetcher(src_dir_abs, repos=repos)
             except ValueError:
                 break;
     # fetch repos
-    if not os.path.isdir(src_dir):
-        os.mkdir(src_dir)
+    if not os.path.isdir(src_dir_abs):
+        os.mkdir(src_dir_abs)
     fetcher.clone()
     # create bblayers.conf file, don't overwrite
     if not os.path.isdir(conf_dir):
         os.mkdir(conf_dir)
-    bblayers = BBLayerSerializer(src_dir, repos=fetcher._repos)
+    bblayers = BBLayerSerializer(src_dir_rel, repos=fetcher._repos)
     if os.path.exists(bblayers_file):
         raise ValueError(bblayers_file + " already exists");
     with open(bblayers_file, 'w') as test_file:
         bblayers.write(fd=test_file)
-    # copy local.conf.type -> local.conf
+    # copy local_type.conf -> local.conf
     shutil.copy(local_conf_orig, local_conf)
     # generate environment.sh
     shutil.copy(env_sh_template, env_sh)
     os.chmod(env_sh, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
     for line in fileinput.input(env_sh, inplace=1):
-        line = re.sub("@sources@", src_dir, line.rstrip())
+        line = re.sub("@sources@", src_dir_rel, line.rstrip())
         print(line)
 
     return
@@ -392,6 +394,7 @@ def main():
     setup_parser.add_argument("-c", "--conf-dir", default="conf", help=conf_dir_help)
     setup_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
     setup_parser.add_argument("-b", "--build-type", default="core", help=build_type_help)
+    setup_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
     setup_parser.set_defaults(func=setup)
     # parser for 'manifest' action
     manifest_parser = actionparser.add_parser("manifest", help=manifest_help)

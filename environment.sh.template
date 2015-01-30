@@ -2,5 +2,4 @@
 
 # clean env and add OE stuff
 . /etc/profile
-METAS=$(readlink -f `dirname ./`)/@sources@
-export PATH=${METAS}/openembedded-core/scripts:${METAS}/bitbake/bin:$PATH
+export PATH=@sources@/openembedded-core/scripts:@sources@/bitbake/bin:$PATH
