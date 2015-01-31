@@ -5,6 +5,12 @@ conf/sanity_info
 build.log
 downloads/
 fetch.conf
-metas/
 sstate-cache/
 tmp-glibc/
+build.sh
+conf/local.conf
+conf/bblayers.conf
+conf/auto.conf
+conf/site.conf
+environment.sh
+LAYERS

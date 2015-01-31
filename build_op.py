@@ -405,7 +405,7 @@ def setup(args):
         raise ValueError(layers_file + " already exists")
 
     if os.path.exists(build_file_dst):
-        raise ValueError(build_file_dst)
+        raise ValueError(build_file_dst + " already exists")
 
     # Parse JSON file with repo data
     repo_json = "LAYERS_" + build_type + ".json"
