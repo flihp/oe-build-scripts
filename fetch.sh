@@ -11,7 +11,7 @@ if [ -f fetch.conf ]; then
 fi
 
 GIT_MIRROR=${GIT_MIRROR:-""}
-METAS_DIR=${METAS_DIR:-./metas}
+METAS_DIR=${METAS_DIR:-./sources}
 
 usage () {
     cat <<EOF

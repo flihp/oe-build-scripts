@@ -2,4 +2,5 @@
 
 # clean env and add OE stuff
 . /etc/profile
-export PATH=@sources@/openembedded-core/scripts:@sources@/bitbake/bin:$PATH
+SRCDIR=$(pwd)/@sources@
+export PATH=${SRCDIR}/openembedded-core/scripts:${SRCDIR}/bitbake/bin:$PATH

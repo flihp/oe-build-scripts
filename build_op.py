@@ -18,6 +18,22 @@ import tempfile
 """ This is a utility to manage an OE build directory.
 """
 
+class LayerSerializer:
+    """ Class to serialize a collection of Repo objects into LAYERS form.
+    """
+    def __init__(self, repos):
+        self._repos = []
+        for repo in repos:
+            if type(repo) is Repo:
+                self._repos.append(repo)
+            else:
+                raise TypeError
+    def write(self, fd=sys.stdout):
+        """ Write the LAYERS file to the specified file object.
+        """
+        for repo in self._repos:
+            fd.write("{0} {1} {2} {3}\n".format(repo._name, repo._url, repo._branch, repo._revision))
+
 class BBLayerSerializer:
     """ Class to serialize a collection of Repo objects into bblayer form.
     """
@@ -265,27 +281,15 @@ def repo_state(git_dir):
     ).rstrip()
     return url, branch, rev
 
-def manifest(args):
-    """ Create manifest in JSON describing current state of repos.
+def json_gen(args):
+    """ Parse bblayers.conf and collect data from repos in src_dir to generate
+        a json file representing their state.
     """
     top_dir = os.path.abspath(args.top_dir)
-    repo_json_rel = args.repos_json
-    repo_json = os.path.abspath(args.repos_json)
-    src_dir = os.path.abspath(args.src_dir)
-    bblayers_file = os.path.abspath(args.bblayers)
-
-    # collect build config files and tar it all up
-    # make temporary directory
-    tmp_dir = tempfile.mkdtemp()
-    # mk conf dir
-    os.mkdir(os.path.join(tmp_dir, "conf"))
-    # copy local.conf to tmp/conf/local.conf
-    shutil.copy("conf/bblayers.conf", os.path.join(tmp_dir, "conf"))
-    shutil.copy("conf/local.conf", os.path.join(tmp_dir, "conf"))
-    # copy environment.sh to tmp/
-    shutil.copy("environment.sh", os.path.join(tmp_dir, "environment.sh"))
-    # copy build.sh to tmp/
-    shutil.copy("build.sh", os.path.join(tmp_dir, "build.sh"))
+    conf_dir = os.path.join(top_dir, "conf")
+    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
+    src_dir = os.path.join(top_dir, args.src_dir)
+    json_out_file = os.path.join(top_dir, args.json_out)
 
     # Get layers from bblayers.conf
     with open(bblayers_file, 'r') as bblayers_fd:
@@ -322,32 +326,87 @@ def manifest(args):
                 repo_layer = None
             fetcher.add_repo(Repo(item, url, branch=branch, revision=rev, layers=repo_layer))
     # Serialize Repo objects to JSON manifest
-    with open(os.path.join(tmp_dir, repo_json_rel), 'w') as repo_json_fd:
+    with open(json_out_file, 'w') as repo_json_fd:
         json.dump(fetcher, repo_json_fd, indent=4, cls=FetcherEncoder)
-   # tar it all up
-    with tarfile.open("tmp.tar.bz2", "w:bz2") as tar:
-        tar.add(tmp_dir, arcname="the_build", recursive=True)
+
+def manifest(args):
+    """ Create manifest describing current state of repos in src_dir.
+
+    top_dir: The root directory of the build.
+    """
+    # need sanity tests for paths / names
+    top_dir = os.path.abspath(args.top_dir)
+    conf_dir = os.path.join(top_dir, "conf")
+    archive_prefix = args.archive
+    archive_file = os.path.join(top_dir, archive_prefix + ".tar.bz2")
+    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
+    localconf_file = os.path.join(conf_dir, "local.conf")
+    environment_sh_file = os.path.join(top_dir, "environment.sh")
+    build_sh_file = os.path.join(top_dir, "build.sh")
+    fetch_sh_file = os.path.join(top_dir, "fetch.sh")
+    layers_file = os.path.join(top_dir, "LAYERS")
+
+    # collect build config files and tar it all up
+    # make temporary directory
+    tmp_dir = tempfile.mkdtemp()
+    # mk conf dir
+    os.mkdir(os.path.join(tmp_dir, "conf"))
+    # copy local.conf to tmp/conf/local.conf
+    shutil.copy(bblayers_file, os.path.join(tmp_dir, "conf"))
+    shutil.copy(localconf_file, os.path.join(tmp_dir, "conf"))
+    # copy environment.sh to tmp/
+    shutil.copy(environment_sh_file, os.path.join(tmp_dir, "environment.sh"))
+    # copy build.sh to tmp/
+    shutil.copy(build_sh_file, os.path.join(tmp_dir, "build.sh"))
+    # copy fetch.sh to tmp/
+    shutil.copy(fetch_sh_file, os.path.join(tmp_dir, "fetch.sh"))
+    # copy LAYERS to tmp
+    shutil.copy(layers_file, os.path.join(tmp_dir, "LAYERS"))
+
+    # tar it all up
+    with tarfile.open(archive_file, "w:bz2") as tar:
+        tar.add(tmp_dir, arcname=archive_prefix, recursive=True)
+
     return
 
 def setup(args):
     """ Setup build structure.
     """
-    top_dir = args.top_dir
+    top_dir = os.path.abspath(args.top_dir)
     build_type = args.build_type
-    conf_dir = os.path.join(top_dir, args.conf_dir)
-    src_dir_abs = os.path.join(top_dir, args.src_dir)
-    src_dir_rel = args.src_dir
+    build_file_src = os.path.join(top_dir, "build_" + build_type + ".sh")
+    build_file_dst = os.path.join(top_dir, "build.sh")
+    conf_dir = os.path.join(top_dir, "conf")
+    src_dir_abs = os.path.join(top_dir, "source")
+    src_dir_rel = "sources"
+    layers_file = os.path.join(top_dir, "LAYERS")
 
-    # sanity test existence of build_type
-    # need files: LAYERS_build-type.json, local_build-type.conf
+    # sanity test for generated files that have already been created
+    # do this before generating any files to prevent leaving thigns half done
     local_conf = os.path.join(conf_dir, "local.conf")
+    if os.path.exists(local_conf):
+        raise ValueError("generated file already exists: " + local_conf)
     local_conf_orig = os.path.join(conf_dir, "local_" + build_type + ".conf")
-    env_sh = "environment.sh"
-    env_sh_template = "environment.sh.template"
     if not os.path.exists(local_conf_orig):
         raise ValueError("no config to copy: " + local_conf_orig)
 
-    bblayers_file = conf_dir + "/bblayers.conf"
+    env_sh = os.path.join(top_dir, "environment.sh")
+    if os.path.exists(env_sh):
+        raise ValueError("generated file already exists: " + env_sh)
+    env_sh_template = os.path.join(top_dir, "environment.sh.template")
+    if not os.path.exists(env_sh_template):
+        raise ValueError("no template to copy: " + sh_env_template)
+
+    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
+    if os.path.exists(bblayers_file):
+        raise ValueError(bblayers_file + " already exists")
+
+    if os.path.exists(layers_file):
+        raise ValueError(layers_file + " already exists")
+
+    if os.path.exists(build_file_dst):
+        raise ValueError(build_file_dst)
+
     # Parse JSON file with repo data
     repo_json = "LAYERS_" + build_type + ".json"
     with open(repo_json, 'r') as repos_fd:
@@ -357,26 +416,31 @@ def setup(args):
                 fetcher = RepoFetcher(src_dir_abs, repos=repos)
             except ValueError:
                 break;
-    # fetch repos
-    if not os.path.isdir(src_dir_abs):
-        os.mkdir(src_dir_abs)
-    fetcher.clone()
-    # create bblayers.conf file, don't overwrite
+    # create bblayers.conf file
     if not os.path.isdir(conf_dir):
         os.mkdir(conf_dir)
     bblayers = BBLayerSerializer(src_dir_rel, repos=fetcher._repos)
-    if os.path.exists(bblayers_file):
-        raise ValueError(bblayers_file + " already exists");
     with open(bblayers_file, 'w') as test_file:
         bblayers.write(fd=test_file)
+
+    # create LAYERS file
+    layers = LayerSerializer(fetcher._repos)
+    with open(layers_file, 'w') as layers_fd:
+        layers.write(fd=layers_fd)
+
     # copy local_type.conf -> local.conf
     shutil.copy(local_conf_orig, local_conf)
+
     # generate environment.sh
     shutil.copy(env_sh_template, env_sh)
     os.chmod(env_sh, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
     for line in fileinput.input(env_sh, inplace=1):
         line = re.sub("@sources@", src_dir_rel, line.rstrip())
         print(line)
+
+    # copy build script
+    shutil.copy(build_file_src, build_file_dst)
+    os.chmod(build_file_dst, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
 
     return
 
@@ -397,7 +461,7 @@ def main():
     action_help = "An action to perform on the build directory."
     bblayers_help = "Path to the bblayer.conf file."
     conf_dir_help = "Directory where all local bitbake configs live."
-    manifest_help = "Generate JSON manifest describing current state of repos."
+    manifest_help = "Generate tarball for reproducing build."
     setup_help = "Setup the OE build directory. This includes cloning the " \
             "repos from the JSON file and creating the bblayers.conf " \
             "file."
@@ -405,23 +469,29 @@ def main():
     top_dir_help = "Root of build directory. This is TOPDIR in OE. Defaults " \
             "to the current working directory."
     build_type_help = "The type of the build to setup."
+    json_gen_help = "Parse bblayers.conf and git repos in source dir to generate JSON file describing the build."
+    json_out_help = "File to write JSON representation of the build state to."
+    archive_file_help = "Prefix for build archive file name."
 
     parser = argparse.ArgumentParser(prog=__file__, description=description)
     actionparser = parser.add_subparsers(help=action_help)
     # parser for 'setup' action
     setup_parser = actionparser.add_parser("setup", help=setup_help)
-    setup_parser.add_argument("-c", "--conf-dir", default="conf", help=conf_dir_help)
-    setup_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
     setup_parser.add_argument("-b", "--build-type", default="core", help=build_type_help)
     setup_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
     setup_parser.set_defaults(func=setup)
     # parser for 'manifest' action
     manifest_parser = actionparser.add_parser("manifest", help=manifest_help)
-    manifest_parser.add_argument("-b", "--bblayers", default="conf/bblayers.conf", help=bblayers_help)
-    manifest_parser.add_argument("-r", "--repos-json", default="LAYERS.json", help=repos_json_help)
     manifest_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
     manifest_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
+    manifest_parser.add_argument("-a", "--archive", default="archive.tar.bz2", help=archive_file_help)
     manifest_parser.set_defaults(func=manifest)
+    # parser for 'json-refresh' action
+    jsongen_parser = actionparser.add_parser("json-gen", help=json_gen_help)
+    jsongen_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
+    jsongen_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
+    jsongen_parser.add_argument("-j", "--json-out", default="LAYERS.json", help=json_out_help)
+    jsongen_parser.set_defaults(func=json_gen)
 
     args = parser.parse_args()
     args.func(args)
