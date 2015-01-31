@@ -12,6 +12,8 @@ import shutil
 import stat
 import subprocess
 import sys
+import tarfile
+import tempfile
 
 """ This is a utility to manage an OE build directory.
 """
@@ -267,9 +269,23 @@ def manifest(args):
     """ Create manifest in JSON describing current state of repos.
     """
     top_dir = os.path.abspath(args.top_dir)
+    repo_json_rel = args.repos_json
     repo_json = os.path.abspath(args.repos_json)
     src_dir = os.path.abspath(args.src_dir)
     bblayers_file = os.path.abspath(args.bblayers)
+
+    # collect build config files and tar it all up
+    # make temporary directory
+    tmp_dir = tempfile.mkdtemp()
+    # mk conf dir
+    os.mkdir(os.path.join(tmp_dir, "conf"))
+    # copy local.conf to tmp/conf/local.conf
+    shutil.copy("conf/bblayers.conf", os.path.join(tmp_dir, "conf"))
+    shutil.copy("conf/local.conf", os.path.join(tmp_dir, "conf"))
+    # copy environment.sh to tmp/
+    shutil.copy("environment.sh", os.path.join(tmp_dir, "environment.sh"))
+    # copy build.sh to tmp/
+    shutil.copy("build.sh", os.path.join(tmp_dir, "build.sh"))
 
     # Get layers from bblayers.conf
     with open(bblayers_file, 'r') as bblayers_fd:
@@ -306,8 +322,11 @@ def manifest(args):
                 repo_layer = None
             fetcher.add_repo(Repo(item, url, branch=branch, revision=rev, layers=repo_layer))
     # Serialize Repo objects to JSON manifest
-    with open(repo_json, 'w') as repo_json_fd:
+    with open(os.path.join(tmp_dir, repo_json_rel), 'w') as repo_json_fd:
         json.dump(fetcher, repo_json_fd, indent=4, cls=FetcherEncoder)
+   # tar it all up
+    with tarfile.open("tmp.tar.bz2", "w:bz2") as tar:
+        tar.add(tmp_dir, arcname="the_build", recursive=True)
     return
 
 def setup(args):
@@ -392,15 +411,15 @@ def main():
     # parser for 'setup' action
     setup_parser = actionparser.add_parser("setup", help=setup_help)
     setup_parser.add_argument("-c", "--conf-dir", default="conf", help=conf_dir_help)
-    setup_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
+    setup_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
     setup_parser.add_argument("-b", "--build-type", default="core", help=build_type_help)
     setup_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
     setup_parser.set_defaults(func=setup)
     # parser for 'manifest' action
     manifest_parser = actionparser.add_parser("manifest", help=manifest_help)
     manifest_parser.add_argument("-b", "--bblayers", default="conf/bblayers.conf", help=bblayers_help)
-    manifest_parser.add_argument("-r", "--repos-json", default=sys.stdout, help=repos_json_help)
-    manifest_parser.add_argument("-s", "--src-dir", default="source", help=source_dir_help)
+    manifest_parser.add_argument("-r", "--repos-json", default="LAYERS.json", help=repos_json_help)
+    manifest_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
     manifest_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
     manifest_parser.set_defaults(func=manifest)
 
