@@ -281,22 +281,25 @@ def repo_state(git_dir):
     ).rstrip()
     return url, branch, rev
 
-def json_gen(args):
-    """ Parse bblayers.conf and collect data from repos in src_dir to generate
-        a json file representing their state.
-    """
-    top_dir = os.path.abspath(args.top_dir)
-    conf_dir = os.path.join(top_dir, "conf")
-    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
-    src_dir = os.path.join(top_dir, args.src_dir)
-    json_out_file = os.path.join(top_dir, args.json_out)
+def repos_from_state(bblayers_file, top_dir="./", src_dir="./sources"):
+    """ Build a list of Repo objects from current build state.
 
+    This requires that we do a few things:
+    1) determine the state of the git repos checked out
+    2) determine which layers are active by parsing bblayers.conf
+    3) figure out which layer comes from which repo
+
+    bblayers_file: path to bblayers file
+    sources: path to directory holding all of the relevant repos
+    """
+    top_dir = os.path.abspath(top_dir)
+    src_dir = os.path.abspath(src_dir)
     # Get layers from bblayers.conf
     with open(bblayers_file, 'r') as bblayers_fd:
         layers = layers_from_bblayers(top_dir, bblayers_fd)
  
     # Create Repo objects from repos in src_dir
-    fetcher = RepoFetcher(src_dir)
+    repos = []
     subdirs = os.listdir(src_dir)
     for item in subdirs:
         repo_root = os.path.join(src_dir, item)
@@ -324,7 +327,22 @@ def json_gen(args):
 
             if repo_layer == []:
                 repo_layer = None
-            fetcher.add_repo(Repo(item, url, branch=branch, revision=rev, layers=repo_layer))
+            repos.append(Repo(item, url, branch=branch, revision=rev, layers=repo_layer))
+    return repos
+ 
+def json_gen(args):
+    """ Parse bblayers.conf and collect data from repos in src_dir to generate
+        a json file representing their state.
+    """
+    top_dir = os.path.abspath(args.top_dir)
+    conf_dir = os.path.join(top_dir, "conf")
+    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
+    src_dir = os.path.join(top_dir, args.src_dir)
+    json_out_file = os.path.join(top_dir, args.json_out)
+
+    # build a list of Repo objects and create a fetcher for them
+    repos = repos_from_state(bblayers_file, top_dir=top_dir, src_dir=src_dir)
+    fetcher = RepoFetcher(src_dir, repos=repos)
     # Serialize Repo objects to JSON manifest
     with open(json_out_file, 'w') as repo_json_fd:
         json.dump(fetcher, repo_json_fd, indent=4, cls=FetcherEncoder)
