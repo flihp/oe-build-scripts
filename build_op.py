@@ -229,7 +229,7 @@ class PathSanity(dict):
         exist: Wiether or not the entity must exist. Exception is thrown if
                this is True and the item does not exist.
         """
-        tmp = os.path.abspath(os.path.realpath(value))
+        tmp = os.path.realpath(os.path.join(self._top_dir, value))
         if exist and not os.path.exists(tmp):
             raise ValueError("{0} does not exist".format(tmp))
         if not exist and os.path.exists(tmp):
@@ -413,37 +413,42 @@ def manifest(args):
     top_dir: The root directory of the build.
     """
     # need sanity tests for paths / names
-    top_dir = os.path.abspath(args.top_dir)
-    conf_dir = os.path.join(top_dir, "conf")
+    paths = PathSanity(args.top_dir)
+    paths.setitem_strict("conf_dir", "conf", exist=True)
+    paths.setitem_strict("bblayers_file",
+                         os.path.join(paths["conf_dir"], "bblayers.conf"),
+                         exist=True)
+    paths.setitem_strict("localconf_file",
+                         os.path.join(paths["conf_dir"], "local.conf"),
+                         exist=True)
+    paths.setitem_strict("env_file", "environment.sh", exist=True)
+    paths.setitem_strict("build_file", "build.sh", exist=True)
+    paths.setitem_strict("fetch_file", "fetch.sh", exist=True)
+    paths.setitem_strict("layers_file", "LAYERS", exist=True)
     archive_prefix = args.archive
-    archive_file = os.path.join(top_dir, archive_prefix + ".tar.bz2")
-    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
-    localconf_file = os.path.join(conf_dir, "local.conf")
-    environment_sh_file = os.path.join(top_dir, "environment.sh")
-    build_sh_file = os.path.join(top_dir, "build.sh")
-    fetch_sh_file = os.path.join(top_dir, "fetch.sh")
-    layers_file = os.path.join(top_dir, "LAYERS")
+    paths["archive_file"] = archive_prefix + ".tar.bz2"
 
     # collect build config files and tar it all up
     # make temporary directory
-    tmp_dir = tempfile.mkdtemp()
+    tmp_paths = PathSanity(tempfile.mkdtemp())
+    tmp_paths.setitem_strict("conf_dir", "conf", exist=False)
     # mk conf dir
-    os.mkdir(os.path.join(tmp_dir, "conf"))
+    os.mkdir(tmp_paths["conf_dir"])
     # copy local.conf to tmp/conf/local.conf
-    shutil.copy(bblayers_file, os.path.join(tmp_dir, "conf"))
-    shutil.copy(localconf_file, os.path.join(tmp_dir, "conf"))
+    shutil.copy(paths["bblayers_file"], tmp_paths["conf_dir"])
+    shutil.copy(paths["localconf_file"], tmp_paths["conf_dir"])
     # copy environment.sh to tmp/
-    shutil.copy(environment_sh_file, os.path.join(tmp_dir, "environment.sh"))
+    shutil.copy(paths["env_file"], tmp_paths._top_dir)
     # copy build.sh to tmp/
-    shutil.copy(build_sh_file, os.path.join(tmp_dir, "build.sh"))
+    shutil.copy(paths["build_file"], tmp_paths._top_dir)
     # copy fetch.sh to tmp/
-    shutil.copy(fetch_sh_file, os.path.join(tmp_dir, "fetch.sh"))
+    shutil.copy(paths["fetch_file"], tmp_paths._top_dir)
     # copy LAYERS to tmp
-    shutil.copy(layers_file, os.path.join(tmp_dir, "LAYERS"))
+    shutil.copy(paths["layers_file"], tmp_paths._top_dir)
 
     # tar it all up
-    with tarfile.open(archive_file, "w:bz2") as tar:
-        tar.add(tmp_dir, arcname=archive_prefix, recursive=True)
+    with tarfile.open(paths["archive_file"], "w:bz2") as tar:
+        tar.add(tmp_paths._top_dir, arcname=archive_prefix, recursive=True)
 
     return
 
