@@ -213,7 +213,7 @@ class RepoEncoder(JSONEncoder):
         return dict_tmp
 
 class PathSanity(dict):
-    """ Sanity check and nomalize parameters.
+    """ Sanity check and nomalize paths relative to a top_dir.
     """
     def __init__(self, top_dir):
         super(PathSanity, self).__init__(self)
@@ -374,17 +374,19 @@ def json_gen(args):
     """ Parse bblayers.conf and collect data from repos in src_dir to generate
         a json file representing their state.
     """
-    top_dir = os.path.abspath(args.top_dir)
-    conf_dir = os.path.join(top_dir, "conf")
-    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
-    src_dir = os.path.join(top_dir, args.src_dir)
-    json_out_file = os.path.join(top_dir, args.json_out)
+    paths = PathSanity(args.top_dir)
+    paths["conf_dir"] = "conf"
+    paths["bblayers_file"] = os.path.join(paths["conf_dir"], "bblayers.conf")
+    paths["src_dir"] = args.src_dir
+    paths["json_out"] = args.json_out
 
     # build a list of Repo objects and create a fetcher for them
-    repos = repos_from_state(bblayers_file, top_dir=top_dir, src_dir=src_dir)
-    fetcher = RepoFetcher(src_dir, repos=repos)
+    repos = repos_from_state(paths["bblayers_file"],
+                             top_dir=paths._top_dir,
+                             src_dir=paths["src_dir"])
+    fetcher = RepoFetcher(paths["src_dir"], repos=repos)
     # Serialize Repo objects to JSON manifest
-    with open(json_out_file, 'w') as repo_json_fd:
+    with open(paths["json_out"], 'w') as repo_json_fd:
         json.dump(fetcher, repo_json_fd, indent=4, cls=FetcherEncoder)
 
 def layers_gen(args):
