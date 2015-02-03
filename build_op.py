@@ -221,7 +221,29 @@ class PathSanity(dict):
             self._top_dir = os.path.abspath(os.path.realpath(top_dir))
         else:
             raise ValueError("top_dir parmater does not exist")
+    def setitem_strict(self, name, value, exist=True):
+        """ Add file or directory as sub item to top_dir specified in
+            constructor.
+        name: Key for retrieval.
+        value: Value associated with key.
+        exist: Wiether or not the entity must exist. Exception is thrown if
+               this is True and the item does not exist.
+        """
+        tmp = os.path.abspath(os.path.realpath(value))
+        if exist and not os.path.exists(tmp):
+            raise ValueError("{0} does not exist".format(tmp))
+        if not exist and os.path.exists(tmp):
+            raise ValueError("{0} already exists".format(tmp))
+        self.__setitem__(name, tmp)
+    def getitem_rel(self, name):
+        """ Get path relative to top_dir from name.
+        """
+        return os.path.relpath(self.__getitem__(name), start=self._top_dir)
     def __setitem__(self, name, value):
+        """ Set path associated with name.
+        
+        Raise value error if path is not a subpath of top_dir.
+        """
         tmp = os.path.abspath(os.path.realpath(value))
         if tmp.startswith(self._top_dir):
             dict.__setitem__(self, name, tmp)
@@ -436,42 +458,27 @@ def setup(args):
     paths = PathSanity(args.top_dir)
     paths["src_dir"] = args.src_dir
     paths["conf_dir"] = "conf"
-    src_dir_rel = os.path.relpath(paths["src_dir"], start=paths._top_dir)
 
     build_type = args.build_type
-    build_file_src = os.path.join(paths._top_dir, "build_" + build_type + ".sh")
-    build_file_dst = os.path.join(paths._top_dir, "build.sh")
-    layers_file = os.path.join(paths._top_dir, "LAYERS")
-
-    # sanity test for generated files that have already been created
-    # do this before generating any files to prevent leaving thigns half done
-    local_conf = os.path.join(paths["conf_dir"], "local.conf")
-    if os.path.exists(local_conf):
-        raise ValueError("generated file already exists: " + local_conf)
-    local_conf_orig = os.path.join(paths["conf_dir"], "local_" + build_type + ".conf")
-    if not os.path.exists(local_conf_orig):
-        raise ValueError("no config to copy: " + local_conf_orig)
-
-    env_sh = os.path.join(paths._top_dir, "environment.sh")
-    if os.path.exists(env_sh):
-        raise ValueError("generated file already exists: " + env_sh)
-    env_sh_template = os.path.join(paths._top_dir, "environment.sh.template")
-    if not os.path.exists(env_sh_template):
-        raise ValueError("no template to copy: " + sh_env_template)
-
-    bblayers_file = os.path.join(paths["conf_dir"], "bblayers.conf")
-    if os.path.exists(bblayers_file):
-        raise ValueError(bblayers_file + " already exists")
-
-    if os.path.exists(layers_file):
-        raise ValueError(layers_file + " already exists")
-
-    if os.path.exists(build_file_dst):
-        raise ValueError(build_file_dst + " already exists")
+    paths.setitem_strict("build_src", "build_" + build_type + ".sh", exist=True)
+    paths.setitem_strict("build_dst", "build.sh", exist=False)
+    paths.setitem_strict("json_dst", "LAYERS.json", exist=False)
+    paths.setitem_strict("json_src", "LAYERS_" + build_type + ".json", exist=True)
+    paths.setitem_strict("local_conf_src",
+                         os.path.join(paths["conf_dir"],
+                                      "local_" + build_type + ".conf"),
+                         exist=True)
+    paths.setitem_strict("local_conf_dst",
+                         os.path.join(paths["conf_dir"], "local.conf"),
+                         exist=False)
+    paths.setitem_strict("env_src", "environment.sh.template", exist=True)
+    paths.setitem_strict("env_dst", "environment.sh", exist=False)
+    paths.setitem_strict("bblayers_dst",
+                         os.path.join(paths["conf_dir"], "bblayers.conf"),
+                         exist=False)
 
     # Parse JSON file with repo data
-    repo_json = "LAYERS_" + build_type + ".json"
-    with open(repo_json, 'r') as repos_fd:
+    with open(paths["json_src"], 'r') as repos_fd:
         while True:
             try:
                 repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
@@ -481,28 +488,30 @@ def setup(args):
     # create bblayers.conf file
     if not os.path.isdir(paths["conf_dir"]):
         os.mkdir(conf_dir)
-    bblayers = BBLayerSerializer(src_dir_rel, repos=fetcher._repos)
-    with open(bblayers_file, 'w') as test_file:
+    bblayers = BBLayerSerializer(paths.getitem_rel("src_dir"),
+                                 repos=fetcher._repos)
+    with open(paths["bblayers_dst"], 'w') as test_file:
         bblayers.write(fd=test_file)
 
-    # create LAYERS file
-    layers = LayerSerializer(fetcher._repos)
-    with open(layers_file, 'w') as layers_fd:
-        layers.write(fd=layers_fd)
+    # create LAYERS.json in root of build to make it obvious which layers are
+    # currently in use.
+    shutil.copy(paths["json_src"], paths["json_dst"])
 
     # copy local_type.conf -> local.conf
-    shutil.copy(local_conf_orig, local_conf)
+    shutil.copy(paths["local_conf_src"], paths["local_conf_dst"])
 
     # generate environment.sh
-    shutil.copy(env_sh_template, env_sh)
-    os.chmod(env_sh, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
-    for line in fileinput.input(env_sh, inplace=1):
-        line = re.sub("@sources@", src_dir_rel, line.rstrip())
+    shutil.copy(paths["env_src"], paths["env_dst"])
+    os.chmod(paths["env_dst"],
+             stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
+    for line in fileinput.input(paths["env_dst"], inplace=1):
+        line = re.sub("@sources@", paths.getitem_rel("src_dir"), line.rstrip())
         print(line)
 
     # copy build script
-    shutil.copy(build_file_src, build_file_dst)
-    os.chmod(build_file_dst, stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
+    shutil.copy(paths["build_src"], paths["build_dst"])
+    os.chmod(paths["build_dst"],
+             stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH | stat.S_IWOTH)
 
     return
 
