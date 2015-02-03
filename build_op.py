@@ -487,17 +487,6 @@ def setup(args):
 
     return
 
-"""
-    print("serializing a single Repo to JSON:")
-    print(RepoEncoder().encode(fetcher._repos[0]))
-    print("serializing a single Repo to JSON with dumps")
-    print(json.dumps(fetcher._repos[0], indent=4, cls=RepoEncoder))
-    print("serializing a RepoFetcher to JSON:")
-    print(FetcherEncoder().encode(fetcher))
-    print("serializing a RepoFetcher to JSON with dumps")
-    print(json.dumps(fetcher, indent=4, cls=FetcherEncoder))
-"""
-
 def main():
     description = "Manage OE build infrastructure."
     repos_json_help = "A JSON file describing the state of the repos."
