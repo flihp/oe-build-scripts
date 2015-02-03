@@ -392,26 +392,19 @@ def json_gen(args):
 def layers_gen(args):
     """ Collect data from repos in src_dir to generate the LAYERS file.
     """
-    top_dir = os.path.abspath(args.top_dir)
-    if not os.path.isabs(args.src_dir):
-        src_dir = os.path.join(top_dir, args.src_dir)
-    else:
-        src_dir = os.path.abspath(args.src_dir)
-    if not os.path.isabs(args.bblayers_file):
-        bblayers_file = os.path.join(top_dir, args.bblayers_file)
-    else:
-        bblayers_file = os.path.abspath(args.bblayers_file)
-    if not os.path.isabs(args.layers_file):
-        layers_file = os.path.join(top_dir, args.layers_file)
-    else:
-        layers_file = os.path.abspath(args.layers_file)
+    paths = PathSanity(args.top_dir)
+    paths["src_dir"] = args.src_dir
+    paths["bblayers_file"] = args.bblayers_file
+    paths["layers_file"] = args.layers_file
 
     # create list of Repo objects
-    repos = repos_from_state(bblayers_file, top_dir=top_dir, src_dir=src_dir)
+    repos = repos_from_state(paths["bblayers_file"],
+                             top_dir=paths._top_dir,
+                             src_dir=paths["src_dir"])
 
     # create LAYERS file
     layers = LayerSerializer(repos)
-    with open(layers_file, 'w') as layers_fd:
+    with open(paths["layers_file"], 'w') as layers_fd:
         layers.write(fd=layers_fd)
 
 def manifest(args):
