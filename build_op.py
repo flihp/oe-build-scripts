@@ -161,7 +161,7 @@ class Repo(object):
                     ['git', 'clone', '--progress', self._url, dest], shell=False
                 )
             else:
-                return 1
+                raise EnvironmentError("Cannot clone {0} to {1}: directory exists".format(self._name, dest))
         except subprocess.CalledProcessError, e:
             print(e)
  
@@ -487,6 +487,44 @@ def setup(args):
 
     return
 
+def fetch_repos(args):
+    """ Clone repos and set them to the state described by the LAYERS.json file
+    """
+    top_dir = os.path.realpath(os.path.abspath(args.top_dir))
+    src_dir = os.path.realpath(os.path.join(top_dir, args.src_dir))
+    json_in = os.path.realpath(os.path.join(top_dir, args.json_in))
+    if not src_dir.startswith(top_dir):
+        raise ValueError("src-dir must be a subdirectory of top-dir")
+    if not json_in.startswith(top_dir):
+        raise ValueError("json-in must be a child of top-dir")
+    update = args.update
+
+    if not os.path.exists(json_in):
+        print("LAYERS.json file missing. Run 'setup' action, or specify json "
+              "file explicitly.")
+        sys.exit(1)
+
+    # Parse JSON file with repo data
+    with open(json_in, 'r') as repos_fd:
+        while True:
+            try:
+                repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
+                fetcher = RepoFetcher(src_dir, repos=repos)
+            except ValueError:
+                break;
+
+    if not os.path.exists(src_dir):
+        os.mkdir(src_dir)
+
+    try:
+        if not update:
+            fetcher.clone()
+        else:
+            raise NotImplementedError()
+    except EnvironmentError as e:
+        print(e)
+        sys.exit(1)
+
 def main():
     description = "Manage OE build infrastructure."
     repos_json_help = "A JSON file describing the state of the repos."
@@ -533,6 +571,16 @@ def main():
     layersgen_parser.add_argument("-l", "--layers-file", default="LAYERS", help=layers_file_help)
     layersgen_parser.add_argument("-b", "--bblayers-file", default="conf/bblayers.conf", help=bblayers_help)
     layersgen_parser.set_defaults(func=layers_gen)
+    # Fetch repos and set their state to match the specification in the JSON
+    # file
+    fetch_help = "Fetch repos and set them to the state defined in JSON file."
+    fetch_update_help = "Update existing repos if necessary. Use carefully."
+    fetch_parser = actionparser.add_parser("fetch", help=fetch_help)
+    fetch_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
+    fetch_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
+    fetch_parser.add_argument("-j", "--json-in", default="LAYERS.json", help=repos_json_help)
+    fetch_parser.add_argument("-u", "--update", action="store_true", default=False, help=fetch_update_help)
+    fetch_parser.set_defaults(func=fetch_repos)
 
     args = parser.parse_args()
     args.func(args)
