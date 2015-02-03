@@ -212,6 +212,24 @@ class RepoEncoder(JSONEncoder):
             dict_tmp["layers"] = obj._layers
         return dict_tmp
 
+class PathSanity(dict):
+    """ Sanity check and nomalize parameters.
+    """
+    def __init__(self, topdir):
+        super(PathSanity, self).__init__(self)
+        if os.path.isdir(topdir):
+            self._topdir = os.path.abspath(os.path.realpath(topdir))
+        else:
+            raise ValueError("topdir parmater does not exist")
+    def __setitem__(self, name, value):
+        tmp = os.path.abspath(os.path.realpath(value))
+        if tmp.startswith(self._topdir):
+            dict.__setitem__(self, name, tmp)
+        else:
+            raise ValueError("parameter {0} is not under topdir".format(name))
+    def __getitem__(self, name):
+        return dict.__getitem__(self, name)
+
 def repo_decode(json_obj):
     """ Create a repository object from a dictionary.
 
@@ -490,31 +508,29 @@ def setup(args):
 def fetch_repos(args):
     """ Clone repos and set them to the state described by the LAYERS.json file
     """
-    top_dir = os.path.realpath(os.path.abspath(args.top_dir))
-    src_dir = os.path.realpath(os.path.join(top_dir, args.src_dir))
-    json_in = os.path.realpath(os.path.join(top_dir, args.json_in))
-    if not src_dir.startswith(top_dir):
-        raise ValueError("src-dir must be a subdirectory of top-dir")
-    if not json_in.startswith(top_dir):
-        raise ValueError("json-in must be a child of top-dir")
     update = args.update
-
-    if not os.path.exists(json_in):
-        print("LAYERS.json file missing. Run 'setup' action, or specify json "
-              "file explicitly.")
+    try:
+        paths = PathSanity(args.top_dir)
+        paths["src_dir"] = args.src_dir
+        paths["json_in"] = args.json_in
+    except ValueError as e:
+        print(e)
         sys.exit(1)
 
+    if not os.path.isfile(paths["json_in"]):
+        raise ValueError("json_in does not exist, run \'setup\' action or specify the file explicitly")
+
     # Parse JSON file with repo data
-    with open(json_in, 'r') as repos_fd:
+    with open(paths["json_in"], 'r') as repos_fd:
         while True:
             try:
                 repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
-                fetcher = RepoFetcher(src_dir, repos=repos)
+                fetcher = RepoFetcher(paths["src_dir"], repos=repos)
             except ValueError:
                 break;
 
-    if not os.path.exists(src_dir):
-        os.mkdir(src_dir)
+    if not os.path.exists(paths["src_dir"]):
+        os.mkdir(paths["src_dir"])
 
     try:
         if not update:
