@@ -240,12 +240,12 @@ def layers_from_bblayers(top_dir, bblayers_fd):
             front += cur
         else:
             break
-    # Gobble till first paren
+    # Gobble till first quote
     while True:
         cur = bblayers_fd.read(1)
         if cur == '\"':
             break
-    # collect all characters till the next paren
+    # collect all characters till the next quote
     layers = ""
     while True:
         cur = bblayers_fd.read(1)
@@ -346,6 +346,31 @@ def json_gen(args):
     # Serialize Repo objects to JSON manifest
     with open(json_out_file, 'w') as repo_json_fd:
         json.dump(fetcher, repo_json_fd, indent=4, cls=FetcherEncoder)
+
+def layers_gen(args):
+    """ Collect data from repos in src_dir to generate the LAYERS file.
+    """
+    top_dir = os.path.abspath(args.top_dir)
+    if not os.path.isabs(args.src_dir):
+        src_dir = os.path.join(top_dir, args.src_dir)
+    else:
+        src_dir = os.path.abspath(args.src_dir)
+    if not os.path.isabs(args.bblayers_file):
+        bblayers_file = os.path.join(top_dir, args.bblayers_file)
+    else:
+        bblayers_file = os.path.abspath(args.bblayers_file)
+    if not os.path.isabs(args.layers_file):
+        layers_file = os.path.join(top_dir, args.layers_file)
+    else:
+        layers_file = os.path.abspath(args.layers_file)
+
+    # create list of Repo objects
+    repos = repos_from_state(bblayers_file, top_dir=top_dir, src_dir=src_dir)
+
+    # create LAYERS file
+    layers = LayerSerializer(repos)
+    with open(layers_file, 'w') as layers_fd:
+        layers.write(fd=layers_fd)
 
 def manifest(args):
     """ Create manifest describing current state of repos in src_dir.
@@ -490,6 +515,8 @@ def main():
     json_gen_help = "Parse bblayers.conf and git repos in source dir to generate JSON file describing the build."
     json_out_help = "File to write JSON representation of the build state to."
     archive_file_help = "Prefix for build archive file name."
+    layers_file_help = "File it write LAYERS representation of the build state to."
+    layers_gen_help = "Parse git repos in source dir to generate LAYERS file describing the build."
 
     parser = argparse.ArgumentParser(prog=__file__, description=description)
     actionparser = parser.add_subparsers(help=action_help)
@@ -510,6 +537,13 @@ def main():
     jsongen_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
     jsongen_parser.add_argument("-j", "--json-out", default="LAYERS.json", help=json_out_help)
     jsongen_parser.set_defaults(func=json_gen)
+    # generate LAYERS file from current state
+    layersgen_parser = actionparser.add_parser("layers-gen", help=layers_gen_help)
+    layersgen_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
+    layersgen_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
+    layersgen_parser.add_argument("-l", "--layers-file", default="LAYERS", help=layers_file_help)
+    layersgen_parser.add_argument("-b", "--bblayers-file", default="conf/bblayers.conf", help=bblayers_help)
+    layersgen_parser.set_defaults(func=layers_gen)
 
     args = parser.parse_args()
     args.func(args)
