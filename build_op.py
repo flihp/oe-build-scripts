@@ -215,18 +215,18 @@ class RepoEncoder(JSONEncoder):
 class PathSanity(dict):
     """ Sanity check and nomalize parameters.
     """
-    def __init__(self, topdir):
+    def __init__(self, top_dir):
         super(PathSanity, self).__init__(self)
-        if os.path.isdir(topdir):
-            self._topdir = os.path.abspath(os.path.realpath(topdir))
+        if os.path.isdir(top_dir):
+            self._top_dir = os.path.abspath(os.path.realpath(top_dir))
         else:
-            raise ValueError("topdir parmater does not exist")
+            raise ValueError("top_dir parmater does not exist")
     def __setitem__(self, name, value):
         tmp = os.path.abspath(os.path.realpath(value))
-        if tmp.startswith(self._topdir):
+        if tmp.startswith(self._top_dir):
             dict.__setitem__(self, name, tmp)
         else:
-            raise ValueError("parameter {0} is not under topdir".format(name))
+            raise ValueError("parameter {0} is not under top_dir".format(name))
     def __getitem__(self, name):
         return dict.__getitem__(self, name)
 
@@ -433,32 +433,33 @@ def manifest(args):
 def setup(args):
     """ Setup build structure.
     """
-    top_dir = os.path.abspath(args.top_dir)
+    paths = PathSanity(args.top_dir)
+    paths["src_dir"] = args.src_dir
+    paths["conf_dir"] = "conf"
+    src_dir_rel = os.path.relpath(paths["src_dir"], start=paths._top_dir)
+
     build_type = args.build_type
-    build_file_src = os.path.join(top_dir, "build_" + build_type + ".sh")
-    build_file_dst = os.path.join(top_dir, "build.sh")
-    conf_dir = os.path.join(top_dir, "conf")
-    src_dir_abs = os.path.join(top_dir, "source")
-    src_dir_rel = "sources"
-    layers_file = os.path.join(top_dir, "LAYERS")
+    build_file_src = os.path.join(paths._top_dir, "build_" + build_type + ".sh")
+    build_file_dst = os.path.join(paths._top_dir, "build.sh")
+    layers_file = os.path.join(paths._top_dir, "LAYERS")
 
     # sanity test for generated files that have already been created
     # do this before generating any files to prevent leaving thigns half done
-    local_conf = os.path.join(conf_dir, "local.conf")
+    local_conf = os.path.join(paths["conf_dir"], "local.conf")
     if os.path.exists(local_conf):
         raise ValueError("generated file already exists: " + local_conf)
-    local_conf_orig = os.path.join(conf_dir, "local_" + build_type + ".conf")
+    local_conf_orig = os.path.join(paths["conf_dir"], "local_" + build_type + ".conf")
     if not os.path.exists(local_conf_orig):
         raise ValueError("no config to copy: " + local_conf_orig)
 
-    env_sh = os.path.join(top_dir, "environment.sh")
+    env_sh = os.path.join(paths._top_dir, "environment.sh")
     if os.path.exists(env_sh):
         raise ValueError("generated file already exists: " + env_sh)
-    env_sh_template = os.path.join(top_dir, "environment.sh.template")
+    env_sh_template = os.path.join(paths._top_dir, "environment.sh.template")
     if not os.path.exists(env_sh_template):
         raise ValueError("no template to copy: " + sh_env_template)
 
-    bblayers_file = os.path.join(conf_dir, "bblayers.conf")
+    bblayers_file = os.path.join(paths["conf_dir"], "bblayers.conf")
     if os.path.exists(bblayers_file):
         raise ValueError(bblayers_file + " already exists")
 
@@ -474,11 +475,11 @@ def setup(args):
         while True:
             try:
                 repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
-                fetcher = RepoFetcher(src_dir_abs, repos=repos)
+                fetcher = RepoFetcher(paths["src_dir"], repos=repos)
             except ValueError:
                 break;
     # create bblayers.conf file
-    if not os.path.isdir(conf_dir):
+    if not os.path.isdir(paths["conf_dir"]):
         os.mkdir(conf_dir)
     bblayers = BBLayerSerializer(src_dir_rel, repos=fetcher._repos)
     with open(bblayers_file, 'w') as test_file:
@@ -565,8 +566,9 @@ def main():
     actionparser = parser.add_subparsers(help=action_help)
     # parser for 'setup' action
     setup_parser = actionparser.add_parser("setup", help=setup_help)
-    setup_parser.add_argument("-b", "--build-type", default="core", help=build_type_help)
+    setup_parser.add_argument("-b", "--build-type", default="oe-core", help=build_type_help)
     setup_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
+    setup_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
     setup_parser.set_defaults(func=setup)
     # parser for 'manifest' action
     manifest_parser = actionparser.add_parser("manifest", help=manifest_help)
