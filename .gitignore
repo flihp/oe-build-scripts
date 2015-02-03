@@ -14,3 +14,4 @@ conf/auto.conf
 conf/site.conf
 environment.sh
 LAYERS
+LAYERS.json
