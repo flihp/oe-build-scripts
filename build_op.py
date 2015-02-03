@@ -499,8 +499,8 @@ def manifest(args):
                          exist=True)
     paths.setitem_strict("env_file", "environment.sh", exist=True)
     paths.setitem_strict("build_file", "build.sh", exist=True)
-    paths.setitem_strict("fetch_file", "fetch.sh", exist=True)
-    paths.setitem_strict("layers_file", "LAYERS", exist=True)
+    paths.setitem_strict("build_op_file", "build_op.py", exist=True)
+    paths.setitem_strict("layers_file", "LAYERS.json", exist=True)
     archive_prefix = args.archive
     paths["archive_file"] = archive_prefix + ".tar.bz2"
 
@@ -518,7 +518,7 @@ def manifest(args):
     # copy build.sh to tmp/
     shutil.copy(paths["build_file"], tmp_paths._top_dir)
     # copy fetch.sh to tmp/
-    shutil.copy(paths["fetch_file"], tmp_paths._top_dir)
+    shutil.copy(paths["build_op_file"], tmp_paths._top_dir)
     # copy LAYERS to tmp
     shutil.copy(paths["layers_file"], tmp_paths._top_dir)
 
