@@ -105,6 +105,13 @@ class RepoFetcher(object):
         """
         for repo in self._repos:
             repo.clone(self._base)
+    def fetch(self):
+        for repo in self._repos:
+            repo.fetch(self._base)
+    def reset_state(self):
+        for repo in self._repos:
+            repo.checkout_branch(self._base)
+            repo.reset_revision(self._base)
 
 class Repo(object):
     """ Data required to clone a git repo in a specific state.
@@ -153,18 +160,87 @@ class Repo(object):
         path: Path where Repo will be cloned. If renative it will be relative
               to $(pwd).
         """
-        dest = path + "/" + self._name
+        work_dir = os.path.join(path, self._name)
         try:
-            if not os.path.exists(dest):
+            if not os.path.exists(work_dir):
                 print("cloning {0} into {1}".format (self._name, path))
                 return subprocess.call(
-                    ['git', 'clone', '--progress', self._url, dest], shell=False
+                    ['git', 'clone', '--progress', self._url, work_dir], shell=False
                 )
             else:
-                raise EnvironmentError("Cannot clone {0} to {1}: directory exists".format(self._name, dest))
+                raise EnvironmentError("Cannot clone {0} to {1}: directory exists".format(self._name, work_dir))
         except subprocess.CalledProcessError, e:
             print(e)
- 
+
+    def fetch(self, path):
+        """ Fetch the Repo.
+        """
+        work_tree = os.path.join(path, self._name)
+        if work_tree is None or not os.path.exists(work_tree):
+            raise EnvironmentError("{0} doesn't exist, cannot fetch".format(work_tree))
+        git_dir = os.path.join(work_tree, ".git")
+        try:
+            print("fetching {0} ...".format(self._name))
+            return subprocess.call(
+                [
+                    'git',
+                    '--git-dir={0}'.format(git_dir),
+                    '--work-tree={0}'.format(work_tree),
+                    'fetch'
+                ],
+                shell=False
+            )
+        except subprocess.CalledProcessError as e:
+            print(e)
+
+    def checkout_branch(self, path):
+        """ Checkout the branch specified. Fall back to using the branch
+            specified in the constructor.
+        """
+        work_tree = os.path.join(path, self._name)
+        if work_tree is None or not os.path.exists(work_tree):
+            raise EnvironmentError("Cannot reset repo state: {0} doesn't exist".format(work_tree))
+        git_dir = os.path.join(work_tree, ".git")
+        try:
+            print("checking out branch: {0}".format(self._branch))
+            return subprocess.call(
+                [
+                    'git',
+                    '--git-dir={0}'.format(git_dir),
+                    '--work-tree={0}'.format(work_tree),
+                    'checkout',
+                    self._branch
+                ],
+                shell=False
+            )
+        except subprocess.CalledProcessError as e:
+            print(e)
+
+    def reset_revision(self, path):
+        """ Reset the repo to the specified revision.
+
+        Use this method with care. You may lose data.
+        """
+        work_tree = os.path.join(path, self._name)
+        if work_tree is None or not os.path.exists(work_tree):
+            raise EnvironmentError("Cannot reset repo state: {0} doesn't exist".format(work_tree))
+        git_dir = os.path.join(work_tree, ".git")
+        try:
+            print("resetting repo revision {0}".format(self._revision))
+            return subprocess.call(
+                [
+                    'git',
+                    '--git-dir={0}'.format(git_dir),
+                    '--work-tree={0}'.format(work_tree),
+                    'reset',
+                    '--hard',
+                    self._revision
+                ],
+                shell=False
+            )
+        except subprocess.CalledProcessError as e:
+            print(e)
+
 class FetcherEncoder(JSONEncoder):
     """ Encode RepoFetcher object as JSON
 
@@ -554,7 +630,8 @@ def fetch_repos(args):
         if not update:
             fetcher.clone()
         else:
-            raise NotImplementedError()
+            fetcher.fetch()
+            fetcher.reset_state()
     except EnvironmentError as e:
         print(e)
         sys.exit(1)
