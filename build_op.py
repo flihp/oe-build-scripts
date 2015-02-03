@@ -455,27 +455,38 @@ def manifest(args):
 def setup(args):
     """ Setup build structure.
     """
-    paths = PathSanity(args.top_dir)
-    paths["src_dir"] = args.src_dir
-    paths["conf_dir"] = "conf"
+    # Setup paths to source and destination files. Test for existence.
+    try:
+        paths = PathSanity(args.top_dir)
+        paths["src_dir"] = args.src_dir
+        paths["conf_dir"] = "conf"
 
-    build_type = args.build_type
-    paths.setitem_strict("build_src", "build_" + build_type + ".sh", exist=True)
-    paths.setitem_strict("build_dst", "build.sh", exist=False)
-    paths.setitem_strict("json_dst", "LAYERS.json", exist=False)
-    paths.setitem_strict("json_src", "LAYERS_" + build_type + ".json", exist=True)
-    paths.setitem_strict("local_conf_src",
-                         os.path.join(paths["conf_dir"],
-                                      "local_" + build_type + ".conf"),
-                         exist=True)
-    paths.setitem_strict("local_conf_dst",
-                         os.path.join(paths["conf_dir"], "local.conf"),
-                         exist=False)
-    paths.setitem_strict("env_src", "environment.sh.template", exist=True)
-    paths.setitem_strict("env_dst", "environment.sh", exist=False)
-    paths.setitem_strict("bblayers_dst",
-                         os.path.join(paths["conf_dir"], "bblayers.conf"),
-                         exist=False)
+        build_type = args.build_type
+        paths.setitem_strict("build_op_data", args.build_op_data)
+        paths.setitem_strict("build_src",
+                             os.path.join(paths["build_op_data"],
+                                          "build_" + build_type + ".sh"))
+        paths.setitem_strict("build_dst", "build.sh", exist=False)
+        paths.setitem_strict("json_dst", "LAYERS.json", exist=False)
+        paths.setitem_strict("json_src",
+                             os.path.join(paths["build_op_data"],
+                                          "LAYERS_" + build_type + ".json"))
+        paths.setitem_strict("local_conf_src",
+                             os.path.join(paths["build_op_data"],
+                                          "local_" + build_type + ".conf"))
+        paths.setitem_strict("local_conf_dst",
+                             os.path.join(paths["conf_dir"], "local.conf"),
+                             exist=False)
+        paths.setitem_strict("env_src",
+                             os.path.join(paths["build_op_data"],
+                                          "environment.sh.template"))
+        paths.setitem_strict("env_dst", "environment.sh", exist=False)
+        paths.setitem_strict("bblayers_dst",
+                             os.path.join(paths["conf_dir"], "bblayers.conf"),
+                             exist=False)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
 
     # Parse JSON file with repo data
     with open(paths["json_src"], 'r') as repos_fd:
@@ -567,6 +578,7 @@ def main():
     archive_file_help = "Prefix for build archive file name."
     layers_file_help = "File it write LAYERS representation of the build state to."
     layers_gen_help = "Parse git repos in source dir to generate LAYERS file describing the build."
+    build_op_data_help = "Path to directory containing data for use by " + __file__
 
     parser = argparse.ArgumentParser(prog=__file__, description=description)
     actionparser = parser.add_subparsers(help=action_help)
@@ -575,6 +587,7 @@ def main():
     setup_parser.add_argument("-b", "--build-type", default="oe-core", help=build_type_help)
     setup_parser.add_argument("-t", "--top-dir", default=os.getcwd(), help=top_dir_help)
     setup_parser.add_argument("-s", "--src-dir", default="sources", help=source_dir_help)
+    setup_parser.add_argument("-d", "--build-op-data", default="build_op_data", help=build_op_data_help)
     setup_parser.set_defaults(func=setup)
     # parser for 'manifest' action
     manifest_parser = actionparser.add_parser("manifest", help=manifest_help)
