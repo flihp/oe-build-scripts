@@ -522,13 +522,10 @@ def fetch_repos(args):
     try:
         paths = PathSanity(args.top_dir)
         paths["src_dir"] = args.src_dir
-        paths["json_in"] = args.json_in
+        paths.setitem_strict("json_in", args.json_in)
     except ValueError as e:
         print(e)
         sys.exit(1)
-
-    if not os.path.isfile(paths["json_in"]):
-        raise ValueError("json_in does not exist, run \'setup\' action or specify the file explicitly")
 
     # Parse JSON file with repo data
     with open(paths["json_in"], 'r') as repos_fd:
