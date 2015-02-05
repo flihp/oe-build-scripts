@@ -574,7 +574,7 @@ def setup(args):
                 break;
     # create bblayers.conf file
     if not os.path.isdir(paths["conf_dir"]):
-        os.mkdir(conf_dir)
+        os.mkdir(paths["conf_dir"])
     bblayers = BBLayerSerializer(paths.getitem_rel("src_dir"),
                                  repos=fetcher._repos)
     with open(paths["bblayers_dst"], 'w') as test_file:
