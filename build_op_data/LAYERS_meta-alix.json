@@ -1,0 +1,21 @@
+[
+    {
+        "url": "git://github.com/openembedded/openembedded-core.git", 
+        "layers": [
+            "meta"
+        ], 
+        "name": "openembedded-core"
+    }, 
+    {
+        "url": "git://github.com/openembedded/bitbake.git", 
+        "layers": null, 
+        "name": "bitbake"
+    }, 
+    {
+        "url": "https://github.com/flihp/meta-alix.git", 
+        "layers": [
+            ""
+        ], 
+        "name": "meta-alix"
+    }
+]
