@@ -106,12 +106,21 @@ class RepoFetcher(object):
         for repo in self._repos:
             repo.clone(self._base)
     def fetch(self):
+        """ Fetch all respos in the RepoFetcher.
+        """
         for repo in self._repos:
             repo.fetch(self._base)
     def reset_state(self):
+        """ Set the state of each Repo to the default repo and verision.
+        """
         for repo in self._repos:
             repo.checkout_branch(self._base)
             repo.reset_revision(self._base)
+    def update(self):
+        """ Update repos.
+        """
+        for repo in self._repos:
+            repo.update(self._base)
 
 class Repo(object):
     """ Data required to clone a git repo in a specific state.
@@ -240,6 +249,20 @@ class Repo(object):
             )
         except subprocess.CalledProcessError as e:
             print(e)
+    def update(self, path):
+        """ Update the repo.
+
+        Check it out if necessary. Otherwise fetch it and reset state.
+        """
+        work_tree = os.path.join(path, self._name)
+        if work_tree is None:
+            raise EnvironmentError("Cannot update repo. Invalid path: {0}".format(work_tree))
+        if not os.path.exists(work_tree):
+            self.clone(path)
+        else:
+            self.fetch(path)
+            self.checkout_branch(path)
+            self.reset_revision(path)
 
 class FetcherEncoder(JSONEncoder):
     """ Encode RepoFetcher object as JSON
@@ -630,8 +653,7 @@ def fetch_repos(args):
         if not update:
             fetcher.clone()
         else:
-            fetcher.fetch()
-            fetcher.reset_state()
+            fetcher.update()
     except EnvironmentError as e:
         print(e)
         sys.exit(1)
