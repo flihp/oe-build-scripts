@@ -70,7 +70,8 @@ class BBLayerSerializer:
         for repo in self._repos:
             if repo._layers is not None:
                 for layer in repo._layers:
-                    fd.write("    ${{TOPDIR}}/{0}/{1}/{2} \\\n".format(self._base, repo._name, layer))
+                    tmp_path = os.path.normpath("{0}/{1}/{2}".format(self._base, repo._name, layer))
+                    fd.write("    ${{TOPDIR}}/{0} \\\n".format(tmp_path))
         fd.write("\"\n")
 
 class RepoFetcher(object):
