@@ -1,0 +1,50 @@
+[
+    {
+        "url": "git://github.com/flihp/openembedded-core.git",
+        "layers": [
+            "meta"
+        ],
+        "name": "openembedded-core",
+        "branch": "dizzy"
+    },
+    {
+        "url": "git://github.com/flihp/openembedded-core.git", 
+        "layers": [
+            "meta"
+        ], 
+        "name": "openembedded-core_old",
+        "branch" : "oxt-197"
+    }, 
+    {
+        "url": "git://github.com/openembedded/bitbake.git", 
+        "layers": null, 
+        "name": "bitbake",
+        "branch" : "1.24"
+    },
+    {
+        "url" : "git://github.com/flihp/meta-openembedded.git",
+        "layers" : [
+            "meta-xfce",
+            "meta-oe",
+            "meta-gnome"
+        ],
+        "name" : "meta-openembedded_old",
+        "branch" : "oxt-197"
+    },
+    {
+        "url" : "git://github.com/flihp/meta-java.git",
+        "name" : "meta-java_old",
+        "branch" : "oxt-197"
+
+    },
+    {
+        "url" : "git://github.com/flihp/meta-selinux.git",
+        "name" : "meta-selinux_old",
+        "branch" : "oxt-197"
+    },
+    {
+        "url" : "git://github.com/flihp/xenclient-oe.git",
+        "name" : "xenclient-oe",
+        "branch" : "oxt-197"
+    }
+]
