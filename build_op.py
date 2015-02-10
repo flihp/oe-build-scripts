@@ -106,6 +106,8 @@ class RepoFetcher(object):
         """
         for repo in self._repos:
             repo.clone(self._base)
+            repo.checkout_branch(self._base)
+            repo.reset_revision(self._base)
     def fetch(self):
         """ Fetch all respos in the RepoFetcher.
         """
