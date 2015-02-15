@@ -11,7 +11,11 @@
     },
     {
         "name" : "meta-intel",
-        "url" : "git://git.yoctoproject.org/meta-intel"
+        "url" : "git://git.yoctoproject.org/meta-intel",
+        "layers" : [
+            "./",
+            "meta-nuc"
+        ]
     },
     {
         "name" : "meta-measured",
