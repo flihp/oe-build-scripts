@@ -1,0 +1,31 @@
+[
+    {   
+        "name" : "openembedded-core",
+        "layers" : [
+            "meta"
+        ],
+        "url" : "git://github.com/openembedded/openembedded-core.git"
+    },  
+    {
+        "name" : "bitbake",
+        "layers" : null,
+        "url" : "git://github.com/openembedded/bitbake.git"
+    },
+    {
+        "name" : "meta-selinux",
+        "url" : "git://github.com/flihp/meta-selinux.git"
+    },  
+    {
+        "name" : "meta-virtualization",
+        "url" : "git://git.yoctoproject.org/meta-virtualization"
+    },  
+    {
+        "name" : "meta-openembedded",
+        "layers" : [
+            "meta-networking",
+            "meta-python",
+            "meta-oe"
+        ],
+        "url" : "git://git.openembedded.org/meta-openembedded"
+    }
+]
