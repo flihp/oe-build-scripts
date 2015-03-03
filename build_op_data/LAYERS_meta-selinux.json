@@ -13,7 +13,7 @@
     },
     {
         "name" : "meta-selinux",
-        "url" : "git://github.com/flihp/meta-selinux.git"
+        "url" : "git://git.yoctoproject.org/meta-selinux"
     },  
     {
         "name" : "meta-virtualization",
