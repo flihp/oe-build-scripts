@@ -17,5 +17,10 @@
         "name" : "meta-measured",
         "url" : "git://github.com/flihp/meta-measured.git",
         "layers" : [ "./" ]
+    },
+    {
+        "name": "meta-measured-bsp",
+        "url": "https://github.com/flihp/meta-measured-bsp.git",
+        "layers": [ "./", "meta-nuc" ]
     }
 ]
