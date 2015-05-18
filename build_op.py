@@ -308,9 +308,7 @@ class RepoEncoder(JSONEncoder):
         dict_tmp["url"] = obj._url
         if obj._branch != "master":
             dict_tmp["branch"] = obj._branch
-        if obj._layers is None:
-            dict_tmp["layers"] = obj._layers
-        elif len(obj._layers) > 1 or obj._layers[0] != "./":
+        if obj._layers is not None:
             dict_tmp["layers"] = obj._layers
         return dict_tmp
 
@@ -366,7 +364,7 @@ def repo_decode(json_obj):
                      json_obj["url"],
                      json_obj.get("branch", "master"),
                      json_obj.get("revision", "HEAD"),
-                     json_obj.get("layers", ["./"]))
+                     json_obj.get("layers", None))
 
 def layers_from_bblayers(top_dir, bblayers_fd):
     """ Parse the layers from the bblayers.conf file
@@ -456,19 +454,24 @@ def repos_from_state(bblayers_file, top_dir="./", src_dir="./sources"):
                 ["find", repo_root, "-name", "layer.conf"]
             ).strip().split('\n'):
                 if os.path.exists(thing):
-                    metas.append(thing)
+                    metas.append(os.path.dirname(os.path.dirname(thing)))
 
             # find layers that are active in each repo 
             repo_layer = []
             for layer in metas:
-                layer = os.path.dirname(os.path.dirname(layer))
                 if layer in layers:
                     # strip leading directory component from layer path
                     # including directory separator character
-                    repo_layer.append(layer[len(repo_root) + 1:])
-
+                    # If string is empty then meta-layer is in the root of
+                    # repo. Use explicit "./" instead of empty string.
+                    tmp = layer[len(repo_root) + 1:]
+                    if not tmp:
+                        tmp = "./"
+                    repo_layer.append(tmp)
+            # reduce empty list to None
             if repo_layer == []:
                 repo_layer = None
+
             repos.append(Repo(item, url, branch=branch, revision=rev, layers=repo_layer))
     return repos
  
