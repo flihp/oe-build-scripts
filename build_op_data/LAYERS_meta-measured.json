@@ -1,24 +1,21 @@
 [
     {
         "name" : "bitbake",
-        "url" : "git://github.com/openembedded/bitbake.git",
-        "layers" : null
+        "url" : "git://github.com/openembedded/bitbake.git"
     },
     {
         "name" : "openembedded-core",
         "url" : "git://github.com/openembedded/openembedded-core.git",
-        "layers" : ["meta"]
+        "layers" : [ "meta" ]
     },
     {
         "name" : "meta-intel",
         "url" : "git://git.yoctoproject.org/meta-intel",
-        "layers" : [
-            "./",
-            "meta-nuc"
-        ]
+        "layers" : [ "./", "meta-nuc" ]
     },
     {
         "name" : "meta-measured",
-        "url" : "git://github.com/flihp/meta-measured.git"
+        "url" : "git://github.com/flihp/meta-measured.git",
+        "layers" : [ "./" ]
     }
 ]
