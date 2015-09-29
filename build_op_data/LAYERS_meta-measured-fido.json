@@ -1,0 +1,31 @@
+[
+    {
+        "name" : "bitbake",
+        "branch" : "1.26",
+        "url" : "git://github.com/openembedded/bitbake.git"
+    },
+    {
+        "name" : "openembedded-core",
+        "branch" : "fido",
+        "url" : "git://github.com/openembedded/openembedded-core.git",
+        "layers" : [ "meta" ]
+    },
+    {
+        "name" : "meta-intel",
+        "branch" : "fido",
+        "url" : "git://git.yoctoproject.org/meta-intel",
+        "layers" : [ "./", "meta-nuc" ]
+    },
+    {
+        "name" : "meta-measured",
+        "branch" : "fido",
+        "url" : "git://github.com/flihp/meta-measured.git",
+        "layers" : [ "./" ]
+    },
+    {
+        "name": "meta-measured-bsp",
+        "branch" : "fido",
+        "url": "https://github.com/flihp/meta-measured-bsp.git",
+        "layers": [ "./", "meta-nuc" ]
+    }
+]
