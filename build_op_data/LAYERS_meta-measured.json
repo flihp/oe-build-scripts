@@ -11,7 +11,7 @@
     {
         "name" : "meta-intel",
         "url" : "git://git.yoctoproject.org/meta-intel",
-        "layers" : [ "./", "meta-nuc" ]
+        "layers" : [ "./" ]
     },
     {
         "name" : "meta-measured",
@@ -21,6 +21,6 @@
     {
         "name": "meta-measured-bsp",
         "url": "https://github.com/flihp/meta-measured-bsp.git",
-        "layers": [ "./", "meta-nuc" ]
+        "layers": [ "./" ]
     }
 ]
