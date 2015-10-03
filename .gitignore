@@ -1,3 +1,4 @@
+*.pyc
 bitbake.lock
 pseudodone
 cache/
