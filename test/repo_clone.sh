@@ -10,12 +10,14 @@ git clone ${REPO_DIR} ${REPO_TMP}
 # add a test file & commit
 touch ${REPO_TMP}/tmp
 git --git-dir=${REPO_TMP}/.git --work-tree=${REPO_TMP} add tmp
-git --git-dir=${REPO_TMP}/.git --work-tree=${REPO_TMP} commit --all --message "test commit for checkout"
+git --git-dir=${REPO_TMP}/.git --work-tree=${REPO_TMP} commit --all \
+    --message "test commit for checkout"
 git --git-dir=${REPO_TMP}/.git --work-tree=${REPO_TMP} push origin master
 rm -rf ${REPO_TMP}
 
 # test
-PYTHONPATH+=../ python ./repo_clone.py
+PYTHONPATH+=../ python ./repo_clone.py --name="repo_clone_test" \
+    --url="${REPO_DIR}" --branch="master" --revision="head"
 if [ $? -ne 0 ]; then
     exit $?
 fi
