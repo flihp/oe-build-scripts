@@ -144,3 +144,17 @@ class Repo(object):
             self.fetch(path)
             self.checkout_branch(path)
             self.reset_revision(path)
+    @staticmethod
+    def repo_decode(json_obj):
+        """ Create a repository object from a dictionary.
+
+        Intended for use in JSON deserialization.
+        json_obj: A dictionary object that contains a serialized Repo object.
+        """
+        if type(json_obj) is not dict:
+            raise TypeError
+        return Repo(json_obj["name"],
+                    json_obj["url"],
+                    json_obj.get("branch", "master"),
+                    json_obj.get("revision", "HEAD"),
+                    json_obj.get("layers", None))

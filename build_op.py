@@ -17,20 +17,6 @@ import tempfile
 
 from twobit.oebuild import BBLayerSerializer, FetcherEncoder, LayerSerializer, PathSanity, Repo, RepoEncoder, RepoFetcher
 
-def repo_decode(json_obj):
-    """ Create a repository object from a dictionary.
-
-    Intended for use in JSON deserialization.
-    json_obj: A dictionary object that contains a serialized Repo object.
-    """
-    if type(json_obj) is not dict:
-        raise TypeError
-    return Repo(json_obj["name"],
-                     json_obj["url"],
-                     json_obj.get("branch", "master"),
-                     json_obj.get("revision", "HEAD"),
-                     json_obj.get("layers", None))
-
 def layers_from_bblayers(top_dir, bblayers_fd):
     """ Parse the layers from the bblayers.conf file
 
@@ -262,7 +248,7 @@ def setup(args):
     with open(paths["json_src"], 'r') as repos_fd:
         while True:
             try:
-                repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
+                repos = JSONDecoder(object_hook=Repo.repo_decode).decode(repos_fd.read())
                 fetcher = RepoFetcher(paths["src_dir"], repos=repos)
             except ValueError:
                 break;
@@ -312,7 +298,7 @@ def fetch_repos(args):
     with open(paths["json_in"], 'r') as repos_fd:
         while True:
             try:
-                repos = JSONDecoder(object_hook=repo_decode).decode(repos_fd.read())
+                repos = JSONDecoder(object_hook=Repo.repo_decode).decode(repos_fd.read())
                 fetcher = RepoFetcher(paths["src_dir"], repos=repos)
             except ValueError:
                 break;
