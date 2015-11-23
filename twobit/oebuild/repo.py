@@ -158,3 +158,58 @@ class Repo(object):
                     json_obj.get("branch", "master"),
                     json_obj.get("revision", "HEAD"),
                     json_obj.get("layers", None))
+    @staticmethod
+    def repos_from_state(bblayers_file, top_dir="./", src_dir="./sources"):
+        """ Build a list of Repo objects from current build state.
+
+        This requires that we do a few things:
+        1) determine the state of the git repos checked out
+        2) determine which layers are active by parsing bblayers.conf
+        3) figure out which layer comes from which repo
+
+        bblayers_file: path to bblayers file
+        sources: path to directory holding all of the relevant repos
+        """
+        top_dir = os.path.abspath(top_dir)
+        src_dir = os.path.abspath(src_dir)
+        # Get layers from bblayers.conf
+        with open(bblayers_file, 'r') as bblayers_fd:
+            layers = layers_from_bblayers(top_dir, bblayers_fd)
+     
+        # Create Repo objects from repos in src_dir
+        repos = []
+        subdirs = os.listdir(src_dir)
+        for item in subdirs:
+            repo_root = os.path.join(src_dir, item)
+            git_dir = os.path.join(repo_root, ".git")
+            # check that directory is a git repo
+            if os.path.isdir(git_dir):
+                # collect data from git repo
+                url, branch, rev = repo_state(git_dir)
+                # get layers in the repo we're processing
+                metas = []
+                for thing in subprocess.check_output(
+                    ["find", repo_root, "-name", "layer.conf"]
+                ).strip().split('\n'):
+                    if os.path.exists(thing):
+                        metas.append(os.path.dirname(os.path.dirname(thing)))
+
+                # find layers that are active in each repo 
+                repo_layer = []
+                for layer in metas:
+                    if layer in layers:
+                        # strip leading directory component from layer path
+                        # including directory separator character
+                        # If string is empty then meta-layer is in the root of
+                        # repo. Use explicit "./" instead of empty string.
+                        tmp = layer[len(repo_root) + 1:]
+                        if not tmp:
+                            tmp = "./"
+                        repo_layer.append(tmp)
+                # reduce empty list to None
+                if repo_layer == []:
+                    repo_layer = None
+
+                repos.append(Repo(item, url, branch=branch, revision=rev, layers=repo_layer))
+        return repos
+
