@@ -1,5 +1,6 @@
 from twobit.oebuild import Repo
 from argparse import ArgumentParser
+import sys
 
 def main():
     """ Test case to exercise the clone function from the twobit.oebuild.Repo object.
@@ -24,7 +25,7 @@ def main():
     print("twobit.oebuild.Repo test Clone:\n{0}".format (repo))
     try:
         repo.clone(args.name)
-    except Error as e:
+    except Exception as e:
         print(e)
         sys.exit(1)
 
