@@ -1,5 +1,6 @@
 from json import JSONEncoder
 from repo_fetcher import RepoFetcher
+from repo_encoder import RepoEncoder
 
 class FetcherEncoder(JSONEncoder):
     """ Encode RepoFetcher object as JSON
