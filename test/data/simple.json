@@ -1,0 +1,13 @@
+[
+    {
+        "url": "git://github.com/openembedded/openembedded-core.git", 
+        "layers": [
+            "meta"
+        ], 
+        "name": "openembedded-core"
+    }, 
+    {
+        "url": "git://github.com/openembedded/bitbake.git", 
+        "name": "bitbake"
+    }
+]
