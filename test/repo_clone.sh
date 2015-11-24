@@ -9,20 +9,22 @@ fi
 
 # setup
 # create empty repo
-REPO_DIR=repo_clone.git
-REPO_TMP=repo_clone_tmp
+BASE=$(echo "$0" | sed 's&^\(.*\)\.sh&\1&')
+REPO_DIR=${BASE}.git
+REPO_TMP=${BASE}_tmp
+REPO_NAME=${BASE}_test
+
 repo_init ${REPO_DIR} ${REPO_TMP}
 # add a test file & commit
 echo "test" | { repo_commit ${REPO_TMP} test_file; }
 rm -rf ${REPO_TMP}
 
 # test
-PYTHONPATH+=../ python ./repo_clone.py --name="repo_clone_test" \
+PYTHONPATH+=../ python ./repo_clone.py --name="${REPO_NAME}" \
     --url="${REPO_DIR}" --branch="master" --revision="head"
 if [ $? -ne 0 ]; then
     exit $?
 fi
 
 # tear down
-rm -rf ./repo_clone_test
-rm -rf ${REPO_DIR}
+rm -rf ${REPO_NAME} ${REPO_DIR}
