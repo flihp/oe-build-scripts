@@ -22,5 +22,10 @@
         "name": "meta-measured-bsp",
         "url": "https://github.com/flihp/meta-measured-bsp.git",
         "layers": [ "./" ]
+    },
+    {
+        "name" : "meta-openembedded",
+        "url" : "git://github.com/openembedded/meta-openembedded.git",
+        "layers" : [ "./meta-oe" ]
     }
 ]
