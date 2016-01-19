@@ -13,6 +13,7 @@
     },
     {
         "name" : "meta-selinux",
+        "layers" : [ "./" ],
         "url" : "git://git.yoctoproject.org/meta-selinux"
     },  
     {
