@@ -111,6 +111,9 @@ class Repo(object):
 
         Use this method with care. You may lose data.
         """
+        if self._revision is None:
+            print('revision is None, nothing to reset')
+            return
         work_tree = os.path.join(path, self._name)
         if work_tree is None or not os.path.exists(work_tree):
             raise EnvironmentError("Cannot reset repo state: {0} doesn't exist".format(work_tree))
