@@ -6,7 +6,7 @@ import subprocess
 class Repo(object):
     """ Data required to clone a git repo in a specific state.
     """
-    def __init__(self, name, url, branch="master", revision="head", layers=["./"]):
+    def __init__(self, name, url, branch="master", revision=None, layers=["./"]):
         """ Initialize Repo object.
 
         name: Sting name of the repo.
@@ -130,6 +130,28 @@ class Repo(object):
             )
         except subprocess.CalledProcessError as e:
             print(e)
+
+    def ffpull(self, path):
+        """ Merge the current HEAD with the branch.
+        """
+        work_tree = os.path.join(path, self._name)
+        if work_tree is None:
+            raise EnvironmentError('Cannot merge repo. Invalid path: {0}'.format(work_tree))
+        git_dir = os.path.join(work_tree, '.git')
+        try:
+            return subprocess.call(
+                [
+                    'git',
+                    '--git-dir={0}'.format(git_dir),
+                    '--work-tree={0}'.format(work_tree),
+                    'pull',
+                    '--ff-only'
+                ],
+                shell=False
+            )
+        except subprocess.CalledProcessError as e:
+            print(e)
+
     def update(self, path):
         """ Update the repo.
 
@@ -143,7 +165,10 @@ class Repo(object):
         else:
             self.fetch(path)
             self.checkout_branch(path)
-            self.reset_revision(path)
+            if self._revision is not None:
+                self.reset_revision(path)
+            else:
+                self.ffpull(path)
     @staticmethod
     def repo_decode(json_obj):
         """ Create a repository object from a dictionary.
@@ -156,7 +181,7 @@ class Repo(object):
         return Repo(json_obj["name"],
                     json_obj["url"],
                     json_obj.get("branch", "master"),
-                    json_obj.get("revision", "HEAD"),
+                    json_obj.get("revision", None),
                     json_obj.get("layers", None))
     @staticmethod
     def repos_from_state(bblayers_file, top_dir="./", src_dir="./sources"):
