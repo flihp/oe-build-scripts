@@ -1,0 +1,31 @@
+[
+    {
+        "name" : "bitbake",
+        "branch" : "1.30",
+        "url" : "git://github.com/openembedded/bitbake.git"
+    },
+    {
+        "name" : "openembedded-core",
+        "branch" : "krogoth",
+        "url" : "git://github.com/openembedded/openembedded-core.git",
+        "layers" : [ "meta" ]
+    },
+    {
+        "name" : "meta-intel",
+        "branch" : "krogoth",
+        "url" : "git://git.yoctoproject.org/meta-intel",
+        "layers" : [ "./" ]
+    },
+    {
+        "name" : "meta-measured",
+        "branch" : "krogoth",
+        "url" : "git://github.com/flihp/meta-measured.git",
+        "layers" : [ "./" ]
+    },
+    {
+        "name": "meta-measured-bsp",
+        "branch" : "krogoth",
+        "url": "https://github.com/flihp/meta-measured-bsp.git",
+        "layers": [ "./" ]
+    }
+]
