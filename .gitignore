@@ -1,4 +1,5 @@
 *.pyc
+bitbake-cookerdaemon.log
 bitbake.lock
 pseudodone
 cache/
@@ -6,6 +7,7 @@ conf/
 build.log
 downloads/
 fetch.conf
+sources/
 sstate-cache/
 tmp-glibc/
 build.sh
