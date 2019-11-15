@@ -1,0 +1,19 @@
+[
+    {
+        "name" : "bitbake",
+        "branch" : "1.44",
+        "url" : "git://github.com/openembedded/bitbake.git"
+    },
+    {
+        "name" : "openembedded-core",
+        "branch" : "zeus",
+        "url" : "git://github.com/openembedded/openembedded-core.git",
+        "layers" : [ "meta" ]
+    },
+    {
+        "name" : "meta-measured",
+        "branch" : "master",
+        "url" : "git://github.com/flihp/meta-measured.git",
+        "layers" : [ "./" ]
+    }
+]
