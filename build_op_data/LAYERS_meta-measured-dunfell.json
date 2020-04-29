@@ -1,0 +1,31 @@
+[
+    {
+        "name" : "bitbake",
+        "branch" : "1.46",
+        "url" : "git://github.com/openembedded/bitbake.git"
+    },
+    {
+        "name" : "openembedded-core",
+        "branch" : "dunfell",
+        "url" : "git://github.com/openembedded/openembedded-core.git",
+        "layers" : [ "meta" ]
+    },
+    {
+        "name" : "meta-measured",
+        "branch" : "master",
+        "url" : "git://github.com/flihp/meta-measured.git",
+        "layers" : [ "./" ]
+    },
+    {
+        "name" : "meta-python2",
+        "branch" : "dunfell",
+        "url" : "https://git.openembedded.org/meta-python2.git",
+        "layers" : [ "./" ]
+    },
+    {
+        "name" : "meta-openembedded",
+        "branch" : "dunfell",
+        "url" : "https://github.com/openembedded/meta-openembedded.git",
+        "layers" : [ "./meta-oe" ]
+    }
+]
